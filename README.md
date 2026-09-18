@@ -97,6 +97,11 @@ Other scripts:
 - Model versions are pinned (`typesafe/jev-1.13`, not `jev-latest`). LLMs run with reasoning
   effort `none` by default.
 - Latency is wall-clock time around the whole call, retries included, from this machine.
+- **Rate limits.** New OpenRouter accounts get 20 requests per minute per model; going over
+  returns HTTP 429. LLM calls are spaced to `OPENROUTER_RPM` (default 20) and the time spent
+  waiting for a slot is not counted as latency. In real time the cap still limits how often an
+  LLM can decide, so raise `OPENROUTER_RPM` in `.env` once your account allows it. Jev ran at
+  ~30 requests per minute without hitting a limit, so it is not throttled.
 - Cost comes from OpenRouter's own `usage.cost` on every response.
 - The scenario script never depends on controller actions, so all scopes face the same events.
 

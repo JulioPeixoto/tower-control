@@ -28,11 +28,13 @@ function errorMessage(text: string): string {
   }
 }
 
-/** POST with retries on network errors, 429 and 5xx. Other 4xx fail immediately. */
-export async function openrouter<T>(path: string, body: unknown, { retries = 2, timeoutMs = 45_000 } = {}): Promise<T> {
+/** POST with retries on network errors, 429 (honouring Retry-After) and 5xx. Other 4xx fail immediately. */
+export async function openrouter<T>(path: string, body: unknown, { retries = 3, timeoutMs = 45_000 } = {}): Promise<T> {
   let lastError: unknown;
+  let waitMs = 0;
   for (let attempt = 0; attempt <= retries; attempt++) {
-    if (attempt > 0) await Bun.sleep(300 * 2 ** (attempt - 1));
+    if (attempt > 0) await Bun.sleep(waitMs || 300 * 2 ** (attempt - 1));
+    waitMs = 0;
     try {
       const res = await fetch(BASE + path, {
         method: "POST",
@@ -43,7 +45,10 @@ export async function openrouter<T>(path: string, body: unknown, { retries = 2, 
       const text = await res.text();
       if (res.ok) return JSON.parse(text) as T;
       lastError = new OpenRouterError(res.status, `HTTP ${res.status}: ${errorMessage(text)}`);
-      if (res.status !== 429 && res.status < 500) break;
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get("retry-after"));
+        waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 3000 * 2 ** attempt;
+      } else if (res.status < 500) break;
     } catch (e) {
       if (e instanceof OpenRouterError && e.status === 0) throw e;
       lastError = e;

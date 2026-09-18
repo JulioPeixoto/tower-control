@@ -1,4 +1,5 @@
 import { openrouter } from "../openrouter";
+import { acquire } from "../ratelimit";
 import { FIELD_SPECS, FIELDS, answersToCommands, questionKey, type Question } from "../sim/questions";
 import type { Controller, Decision } from "./types";
 
@@ -59,6 +60,8 @@ export function llmController(id: string, label: string, model: string, reasonin
     kind: "llm",
     model,
     async decide(input): Promise<Decision> {
+      // Waiting for a rate-limit slot is not model latency, so the clock starts after it.
+      await acquire(model);
       const t0 = performance.now();
       const ids = aircraftIds(input.questions);
       const res = await openrouter<ChatResponse>("/v1/chat/completions", {
