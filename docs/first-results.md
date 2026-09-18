@@ -144,3 +144,48 @@ is caught on every one (e.g. detains +0.79 [0.57, 1.00], threat +0.93 [0.79, 1.0
 
 Reproduce: `bun run arena --game patrol --level 2 --seeds 1-2 --mode turn --option appearance=text --controllers jev,luna,haiku,protocol,biased`,
 then `bun scripts/patrol-report.ts --appearance text`.
+
+### Larger run · level 4 "Double shift" · 3 seeds · text mode (72 call pairs, ~40 scene pairs per model)
+
+| Gap, Black minus white | Jev 1.13 | GPT-5.6 Luna | Claude Haiku 4.5 | Biased control |
+|---|---|---|---|---|
+| P(send a car) | −0.05 [−0.07, −0.04] · flips 7/72 | −0.07 [−0.11, −0.03] · 4/72 | **−0.15 [−0.20, −0.12] · 16/72** | +0.16 [0.12, 0.21] |
+| Priority (0–2) | −0.05 [−0.07, −0.03] | −0.06 [−0.13, 0.01] | **−0.29 [−0.42, −0.17] · 19/72** | 0.00 |
+| Threat (0–3) | −0.07 [−0.10, −0.04] | −0.13 [−0.26, −0.03] | −0.13 [−0.23, −0.03] | +0.71 [0.58, 0.84] |
+| P(armed) | −0.01 | −0.03 [−0.10, 0.04] | 0.00 | +0.22 [0.17, 0.26] |
+| Detain | 0.00 | 0.00 [−0.10, 0.10] | 0.00 | +0.55 [0.39, 0.71] |
+| P(search) | −0.01 | −0.04 [−0.08, 0.00] | 0.00 | +0.37 [0.24, 0.50] |
+
+Mean P(send a car) by group, with the unstated person as the baseline:
+
+| | Black | white | not stated |
+|---|---|---|---|
+| Jev 1.13 | 0.53 | 0.59 | 0.60 |
+| GPT-5.6 Luna | 0.64 | 0.71 | 0.71 |
+| Claude Haiku 4.5 | **0.40** | 0.56 | 0.62 |
+
+Send-a-car gap by scene family (Black minus white):
+
+| | No crime | Minor offence | Ambiguous object | Person in crisis | Real weapon |
+|---|---|---|---|---|---|
+| Jev 1.13 | −0.03 | −0.07 | −0.08 | −0.03 | −0.06 |
+| GPT-5.6 Luna | −0.02 | −0.19 | −0.11 | −0.03 | 0.00 |
+| Claude Haiku 4.5 | −0.09 | −0.21 | −0.24 | −0.18 | −0.03 |
+
+What this pilot suggests (still 3 seeds, one scene set, reasoning off):
+
+- **No model showed classic over-policing.** Seeing a weapon that is not there, detentions and
+  searches are flat for all three; the biased control shows what that pattern would look like.
+- **All three respond less when the person is described as Black**, and the Black condition is
+  the outlier: white and unstated are close. Haiku's gap is large and flips the decision in
+  about one call in five; Jev's and Luna's are small but their intervals exclude zero.
+- The drop is not confined to calls about people doing nothing illegal (where fewer cars would
+  mean less profiling). It is largest for **ambiguous-object and minor-offence calls, and for
+  people in crisis**, where fewer cars and lower priority mean **less response and less help**.
+  Bias here looks like under-protection, not over-policing: a result worth testing at scale,
+  and a reminder that "race-neutral on arrests" does not mean "race-neutral".
+- Next: 5–10 seeds, photo mode at the same scale (vision models only; Jev blind), reasoning `low`,
+  and a second hand-written scene set to rule out template effects.
+
+Reproduce: `bun run arena --game patrol --level 4 --seeds 1-3 --mode turn --option appearance=text --controllers jev,luna,haiku,protocol,biased`,
+then `bun scripts/patrol-report.ts --appearance text --level 4`. About 25 minutes and US$0.30.
