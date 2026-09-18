@@ -14,6 +14,7 @@ const { values } = parseArgs({
     speed: { type: "string", default: "8" },
     every: { type: "string" },
     controllers: { type: "string", default: "fifo,random" },
+    facts: { type: "boolean", default: false },
   },
 });
 
@@ -32,7 +33,7 @@ const decisionEvery = Number(values.every ?? (mode === "turn" ? 10 : 2));
 
 const rows: Record<string, string | number>[] = [];
 for (const seed of parseSeeds(values.seeds!)) {
-  const config = { level, seed, mode, speed: Number(values.speed), decisionEvery, controllers };
+  const config = { level, seed, mode, speed: Number(values.speed), decisionEvery, controllers, facts: values.facts };
   const match = new Match(config, controllers.map((id) => makeController(id, seed)), mode === "turn");
   const started = performance.now();
   const { stopped } = await match.run();

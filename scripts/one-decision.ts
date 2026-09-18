@@ -10,7 +10,7 @@ const [level = "3", seed = "42", at = "240", list = "jev,luna,haiku,fifo"] = Bun
 const world = new World(generateScenario(Number(level), Number(seed)));
 while (world.t < Number(at)) world.step(0.5);
 
-const stateText = describeState(world);
+const stateText = describeState(world, { facts: process.env.FACTS === "1" });
 const questions = buildQuestions(world);
 console.log(stateText);
 console.log(`\n${questions.length} questions for ${questions.length / 4} aircraft\n`);

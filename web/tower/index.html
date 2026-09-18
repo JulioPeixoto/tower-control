@@ -12,6 +12,7 @@
   <body>
     <header class="console">
       <div class="ident">
+        <a class="back" href="/">Decision Arena</a>
         <h1 class="ident-name">Tower Control</h1>
         <p class="ident-sub">Approach · runways 09L / 09R</p>
       </div>
@@ -30,6 +31,13 @@
           <div class="toggles">
             <label class="toggle"><input type="radio" name="mode" value="realtime" checked /><span>Real time</span></label>
             <label class="toggle"><input type="radio" name="mode" value="turn" /><span>Turn based</span></label>
+          </div>
+        </div>
+        <div class="field" role="group" aria-labelledby="state-label" title="Facts adds exact, code-computed facts per aircraft to the text every controller reads">
+          <span class="field-label" id="state-label">State text</span>
+          <div class="toggles">
+            <label class="toggle"><input type="radio" name="state" value="raw" checked /><span>Raw</span></label>
+            <label class="toggle"><input type="radio" name="state" value="facts" /><span>Facts</span></label>
           </div>
         </div>
         <label class="field">

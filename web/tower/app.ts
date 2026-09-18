@@ -1,7 +1,7 @@
-import type { ControllerInfo } from "../src/controllers/index";
-import type { ClientMessage, Frame, LaneFrame, LaneResult, MatchConfig, ServerMessage } from "../src/protocol";
-import { fmtClock } from "../src/sim/geometry";
-import type { RadioLine } from "../src/sim/types";
+import type { ControllerInfo } from "../../src/controllers/index";
+import type { ClientMessage, Frame, LaneFrame, LaneResult, MatchConfig, ServerMessage } from "../../src/protocol";
+import { fmtClock } from "../../src/sim/geometry";
+import type { RadioLine } from "../../src/sim/types";
 import { drawRadar, readPalette } from "./radar";
 
 interface Panel {
@@ -109,6 +109,7 @@ function setupForm(controllers: ControllerInfo[], levels: { level: number; name:
   if (mode === "turn" || mode === "realtime") (form.querySelector(`input[name=mode][value=${mode}]`) as HTMLInputElement).checked = true;
   const speed = params.get("speed");
   if (speed) (form.elements.namedItem("speed") as HTMLSelectElement).value = speed;
+  if (params.get("state") === "facts") (form.querySelector("input[name=state][value=facts]") as HTMLInputElement).checked = true;
 }
 
 form.addEventListener("submit", (e) => {
@@ -132,6 +133,7 @@ function startMatch(): void {
     speed: Number(data.get("speed")) || 8,
     decisionEvery: mode === "turn" ? 10 : 2,
     controllers,
+    facts: data.get("state") === "facts",
   };
   clearPanels();
   ignoreUpTo = Math.max(ignoreUpTo, matchId);

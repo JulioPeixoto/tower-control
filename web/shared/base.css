@@ -1,5 +1,6 @@
+/* Decision Arena console, shared by every game: slate console, paper strips for each
+   controller, colour only for meaning. Each game brings its own world palette. */
 :root {
-  /* Modern radar console: slate scope, paper flight strips, colour only for meaning. */
   --console: #1d262b;
   --console-2: #243037;
   --scope: #2f3d44;
@@ -308,12 +309,13 @@ input[type="number"] {
   opacity: 0.88;
 }
 
-.radar-wrap {
+/* Game area between the strip and the board. Each game draws its own world in here. */
+.panel-body {
   padding: 10px;
 }
 
 /* Keep the whole match on one screen, so it can be recorded. */
-.radar {
+.stage {
   display: block;
   width: min(100%, max(320px, calc(100vh - 420px)));
   aspect-ratio: 1;
@@ -387,13 +389,36 @@ input[type="number"] {
   color: var(--muted);
 }
 
-.radio .r-atc { color: var(--paper); }
+.radio .r-atc,
+.radio .r-decision { color: var(--paper); }
 .radio .r-call,
-.radio .r-event { color: var(--label); }
+.radio .r-event,
+.radio .r-info { color: var(--label); }
 .radio .r-event { opacity: 0.7; }
-.radio .r-emergency { color: var(--red); }
+.radio .r-emergency,
+.radio .r-bad { color: var(--red); }
 .radio .r-alert { color: var(--amber); }
-.radio .r-notice { color: var(--cyan); }
+.radio .r-notice,
+.radio .r-good { color: var(--cyan); }
+
+/* Back to the arena home, above each game's title. */
+.back {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.back::before {
+  content: "← ";
+}
+
+.back:hover {
+  color: var(--label);
+}
 
 /* --- legend -------------------------------------------------------------- */
 
@@ -419,12 +444,6 @@ input[type="number"] {
   fill: none;
   stroke-width: 1.4;
 }
-
-.lg-ac { stroke: var(--label); }
-.lg-ghost { stroke: var(--label); stroke-dasharray: 2 2; opacity: 0.6; }
-.lg-conflict { stroke: var(--amber); }
-.lg-cleared { stroke: var(--cyan); fill: var(--cyan); }
-.lg-emergency { stroke: var(--red); fill: var(--red); }
 
 @media (max-width: 1180px) {
   .console {

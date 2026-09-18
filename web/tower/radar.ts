@@ -1,6 +1,6 @@
-import type { LaneFrame } from "../src/protocol";
-import { RADAR_RANGE, RUNWAYS, RUNWAY_GEOMETRY, SEP_NM, rad } from "../src/sim/geometry";
-import type { AircraftView } from "../src/sim/types";
+import type { LaneFrame } from "../../src/protocol";
+import { RADAR_RANGE, RUNWAYS, RUNWAY_GEOMETRY, SEP_NM, rad } from "../../src/sim/geometry";
+import type { AircraftView } from "../../src/sim/types";
 
 export interface Palette {
   console2: string;

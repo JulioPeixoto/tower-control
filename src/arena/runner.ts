@@ -1,22 +1,19 @@
-// Runs every controller on its own copy of the same scenario, in lockstep.
-//  - turn:     the world pauses while controllers decide. Measures decision quality only.
-//  - realtime: the world keeps moving while controllers decide; answers land on a newer
-//              picture than the one they were based on. Latency becomes part of the score.
+// Runs one world per controller in lockstep, for any arena game.
+//  - turn:     the world waits while a controller decides. Measures decision quality.
+//  - realtime: the world keeps moving; answers land on a newer world than the one asked about.
 import { mkdir } from "node:fs/promises";
-import type { Controller, Decision } from "./controllers/types";
-import type { Frame, LaneFrame, LaneResult, LaneStats, MatchConfig } from "./protocol";
-import { describeState } from "./sim/describe";
-import { buildQuestions } from "./sim/questions";
-import { LEVELS, generateScenario } from "./sim/scenario";
-import type { Command } from "./sim/types";
-import { World, score } from "./sim/world";
+import type { LaneStats } from "../protocol";
+import type { Decider } from "./deciders";
+import type { ArenaConfig, ArenaFrame, ArenaLaneResult } from "./protocol";
+import type { Answers, DecisionRequest, DecisionResult, GameDef, GameWorld } from "./types";
 
-const DT = 0.5;
-const REALTIME_TICK_MS = 50;
+const REALTIME_TICK_MS = 40;
 const FRAME_EVERY_MS = 100;
 const SETTLE_TIMEOUT_MS = 20_000;
+const MAX_DECISIONS_PER_TURN = 50;
 
-export interface DecisionLog {
+export interface ArenaDecisionLog {
+  id: string;
   t0: number;
   t1: number;
   latencyMs: number;
@@ -24,23 +21,21 @@ export interface DecisionLog {
   inputTokens: number;
   outputTokens: number;
   reasoningTokens?: number;
-  questions: number;
   invalid: number;
-  commands: Command[];
-  confidence?: Record<string, number>;
-  actionProbs?: Record<string, Record<string, number>>;
+  answers: Answers;
   error?: string;
 }
 
 interface Lane {
-  controller: Controller;
-  world: World;
+  decider: Decider;
+  world: GameWorld;
   busy: boolean;
-  lastDecisionT: number;
-  pending?: { t0: number; ghosts: { id: string; x: number; y: number }[] };
+  pendingT0?: number;
   inflight?: Promise<void>;
-  log: DecisionLog[];
+  log: ArenaDecisionLog[];
 }
+
+let nextMatchId = 1;
 
 function percentile(values: number[], p: number): number | null {
   if (!values.length) return null;
@@ -48,26 +43,23 @@ function percentile(values: number[], p: number): number | null {
   return sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))]!;
 }
 
-let nextMatchId = 1;
-
-export class Match {
+export class ArenaMatch {
   readonly id = nextMatchId++;
   readonly lanes: Lane[];
   private running = false;
   private lastFrameAt = 0;
-  onFrame?: (frame: Frame) => void;
+  onFrame?: (frame: ArenaFrame) => void;
 
   constructor(
-    readonly config: MatchConfig,
-    controllers: Controller[],
+    readonly game: GameDef,
+    readonly config: ArenaConfig,
+    deciders: Decider[],
     private readonly headless = false,
   ) {
-    const scenario = generateScenario(config.level, config.seed);
-    this.lanes = controllers.map((controller) => ({
-      controller,
-      world: new World(scenario),
+    this.lanes = deciders.map((decider) => ({
+      decider,
+      world: game.createWorld(config.level, config.seed, config.options),
       busy: false,
-      lastDecisionT: -Infinity,
       log: [],
     }));
   }
@@ -94,7 +86,6 @@ export class Match {
     else await this.runRealtime();
     const stopped = !this.done;
     this.running = false;
-
     const inflight = this.lanes.map((l) => l.inflight).filter(Boolean);
     if (inflight.length) await Promise.race([Promise.all(inflight), Bun.sleep(SETTLE_TIMEOUT_MS)]);
     this.emit(true);
@@ -106,21 +97,27 @@ export class Match {
   }
 
   private async runTurn(): Promise<void> {
-    let nextDecision = 0;
+    const dt = this.game.dt;
     while (this.running && !this.done) {
-      if (this.t >= nextDecision) {
+      // Answer everything each world is waiting on before time moves.
+      for (let i = 0; i < MAX_DECISIONS_PER_TURN && this.running; i++) {
+        const asks = this.lanes
+          .filter((l) => !l.world.done)
+          .map((l) => [l, l.world.request()] as const)
+          .filter((pair): pair is readonly [Lane, DecisionRequest] => pair[1] !== null);
+        if (!asks.length) break;
         this.emit(true);
-        await Promise.all(this.lanes.filter((l) => !l.world.done).map((l) => this.decide(l)));
-        nextDecision = this.t + this.config.decisionEvery;
+        await Promise.all(asks.map(([lane, req]) => this.decide(lane, req)));
       }
-      this.stepAll(DT);
+      this.stepAll(dt);
       if (this.headless) continue;
       this.emit();
-      await Bun.sleep((DT * 1000) / this.config.speed);
+      await Bun.sleep((dt * 1000) / this.config.speed);
     }
   }
 
   private async runRealtime(): Promise<void> {
+    const dt = this.game.dt;
     let last = performance.now();
     while (this.running && !this.done) {
       await Bun.sleep(REALTIME_TICK_MS);
@@ -128,36 +125,32 @@ export class Match {
       let simDt = ((now - last) / 1000) * this.config.speed;
       last = now;
       while (simDt > 1e-9) {
-        const dt = Math.min(DT, simDt);
-        this.stepAll(dt);
-        simDt -= dt;
+        const step = Math.min(dt, simDt);
+        this.stepAll(step);
+        simDt -= step;
       }
       for (const lane of this.lanes) {
         if (lane.busy || lane.world.done) continue;
-        if (lane.world.t - lane.lastDecisionT < this.config.decisionEvery) continue;
-        lane.inflight = this.decide(lane);
+        const req = lane.world.request();
+        if (req) lane.inflight = this.decide(lane, req);
       }
       this.emit();
     }
   }
 
-  private async decide(lane: Lane): Promise<void> {
+  private async decide(lane: Lane, req: DecisionRequest): Promise<void> {
     const w = lane.world;
     const t0 = w.t;
-    lane.lastDecisionT = t0;
-    const questions = buildQuestions(w);
-    if (!questions.length) return;
-
     lane.busy = true;
-    lane.pending = { t0, ghosts: w.airborne().map((a) => ({ id: a.id, x: a.x, y: a.y })) };
-    const input = { t: t0, stateText: describeState(w, { facts: this.config.facts }), questions, view: w.view() };
+    lane.pendingT0 = t0;
     const wall0 = performance.now();
-    let d: Decision;
+    let d: DecisionResult;
     try {
-      d = await lane.controller.decide(input);
+      d = await lane.decider.decide(req, w);
     } catch (e) {
       d = {
-        commands: [],
+        answers: {},
+        invalid: Object.keys(req.questions).length,
         latencyMs: performance.now() - wall0,
         costUsd: 0,
         inputTokens: 0,
@@ -165,13 +158,10 @@ export class Match {
         error: e instanceof Error ? e.message : String(e),
       };
     }
-
     const t1 = w.t;
-    if (!w.done) {
-      w.applyCommands(d.commands, { latencyMs: Math.round(d.latencyMs), staleS: t1 - t0 });
-      if (d.error) w.say("SYS", `No usable answer from ${lane.controller.label}: ${d.error.slice(0, 160)}`, "alert");
-    }
+    if (!w.done) w.apply(req, d.answers, { latencyMs: Math.round(d.latencyMs), staleS: t1 - t0, deciderLabel: lane.decider.label, error: d.error });
     lane.log.push({
+      id: req.id,
       t0,
       t1,
       latencyMs: Math.round(d.latencyMs),
@@ -179,26 +169,22 @@ export class Match {
       inputTokens: d.inputTokens,
       outputTokens: d.outputTokens,
       reasoningTokens: d.reasoningTokens,
-      questions: questions.length,
-      invalid: d.invalid ?? 0,
-      commands: d.commands.filter((c) => c.action !== "continue"),
-      confidence: d.confidence,
-      actionProbs: d.actionProbs,
+      invalid: d.invalid,
+      answers: d.answers,
       error: d.error,
     });
     lane.busy = false;
-    lane.pending = undefined;
+    lane.pendingT0 = undefined;
   }
 
   private stats(lane: Lane): LaneStats {
     const ok = lane.log.filter((d) => !d.error);
-    const latencies = ok.map((d) => d.latencyMs);
     const stale = lane.log.map((d) => d.t1 - d.t0);
     return {
       calls: lane.log.length,
       errors: lane.log.length - ok.length,
-      p50Ms: percentile(latencies, 50),
-      p95Ms: percentile(latencies, 95),
+      p50Ms: percentile(ok.map((d) => d.latencyMs), 50),
+      p95Ms: percentile(ok.map((d) => d.latencyMs), 95),
       costUsd: lane.log.reduce((s, d) => s + d.costUsd, 0),
       inputTokens: lane.log.reduce((s, d) => s + d.inputTokens, 0),
       outputTokens: lane.log.reduce((s, d) => s + d.outputTokens, 0),
@@ -206,20 +192,28 @@ export class Match {
     };
   }
 
-  frame(): Frame {
-    const lanes: LaneFrame[] = this.lanes.map((l) => ({
-      id: l.controller.id,
-      label: l.controller.label,
-      kind: l.controller.kind,
-      model: l.controller.model,
-      world: l.world.view(),
-      busy: l.busy,
-      viewAgeS: l.pending ? l.world.t - l.pending.t0 : 0,
-      ghosts: l.pending?.ghosts ?? [],
-      stats: this.stats(l),
-      score: score(l.world.metrics),
-    }));
-    return { type: "frame", matchId: this.id, t: this.t, config: this.config, done: this.done, lanes };
+  frame(): ArenaFrame {
+    return {
+      type: "frame",
+      matchId: this.id,
+      t: this.t,
+      config: this.config,
+      done: this.done,
+      lanes: this.lanes.map((l) => ({
+        id: l.decider.id,
+        label: l.decider.label,
+        kind: l.decider.kind,
+        model: l.decider.model,
+        view: l.world.view(),
+        busy: l.busy,
+        viewAgeS: l.pendingT0 !== undefined ? l.world.t - l.pendingT0 : 0,
+        stats: this.stats(l),
+        score: l.world.score(),
+        metrics: l.world.metrics(),
+        feed: l.world.feed(),
+        done: l.world.done,
+      })),
+    };
   }
 
   private emit(force = false): void {
@@ -230,38 +224,39 @@ export class Match {
     this.onFrame(this.frame());
   }
 
-  results(): LaneResult[] {
+  results(): ArenaLaneResult[] {
     return this.lanes.map((l) => ({
-      id: l.controller.id,
-      label: l.controller.label,
-      score: score(l.world.metrics),
-      metrics: l.world.metrics,
+      id: l.decider.id,
+      label: l.decider.label,
+      score: l.world.score(),
+      metrics: l.world.metrics(),
       stats: this.stats(l),
     }));
   }
 
-  /** Writes the full run (config, metrics and every decision) to runs/. Returns the path. */
   async save(stopped: boolean, dir = "runs"): Promise<string> {
-    await mkdir(dir, { recursive: true });
+    const folder = `${dir}/${this.game.id}`;
+    await mkdir(folder, { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 23);
     const { level, seed, mode } = this.config;
-    const file = `${dir}/${stamp}-L${level}-s${seed}-${mode}.json`;
+    const file = `${folder}/${stamp}-L${level}-s${seed}-${mode}.json`;
     await Bun.write(
       file,
       JSON.stringify(
         {
+          game: this.game.id,
           config: this.config,
-          level: LEVELS[level]?.name,
+          level: this.game.levels[level],
           savedAt: new Date().toISOString(),
           stopped,
           simTime: this.t,
           lanes: this.lanes.map((l) => ({
-            id: l.controller.id,
-            label: l.controller.label,
-            kind: l.controller.kind,
-            model: l.controller.model,
-            score: score(l.world.metrics),
-            metrics: l.world.metrics,
+            id: l.decider.id,
+            label: l.decider.label,
+            kind: l.decider.kind,
+            model: l.decider.model,
+            score: l.world.score(),
+            metrics: l.world.metrics(),
             stats: this.stats(l),
             decisions: l.log,
           })),

@@ -14,6 +14,8 @@ export interface MatchConfig {
   /** Minimum simulated seconds between two decisions of the same controller. */
   decisionEvery: number;
   controllers: string[];
+  /** Add code-computed facts to the state text (same questions, richer picture). */
+  facts?: boolean;
 }
 
 export interface LaneStats {

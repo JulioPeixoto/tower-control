@@ -1,7 +1,9 @@
 // Renders the world as the text every model reads. Runway closures and emergencies appear
 // only as radio text, so a controller has to read language to know about them.
+// With `facts`, each aircraft also gets exact, code-computed facts (never advice): the
+// community's chess tests found Jev goes from worse-than-random to ~950 Elo that way.
 import { pad3 } from "./commands";
-import { ORIGIN, RUNWAYS, RUNWAY_GEOMETRY, bearing, compass, dist, fmtClock } from "./geometry";
+import { CLEARANCE_RANGE, FIX_MAX_ALT, ORIGIN, RADAR_RANGE, RUNWAYS, RUNWAY_GEOMETRY, SEP_FT, SEP_NM, bearing, compass, dist, fmtClock, rad } from "./geometry";
 import type { Aircraft, RadioLine } from "./types";
 import { MAYDAY_DEADLINE_S, MEDICAL_DEADLINE_S, type World } from "./world";
 
@@ -42,12 +44,72 @@ function aircraftLine(a: Aircraft): string {
   );
 }
 
+const DESCENT_FPM = 2000;
+const LOOKAHEAD_S = 120;
+
+const velocity = (a: Aircraft) => ({ vx: (Math.sin(rad(a.hdg)) * a.spd) / 3600, vy: (Math.cos(rad(a.hdg)) * a.spd) / 3600 });
+
+/** Seconds until a straight flight on the current heading leaves the scope, or null if it never does soon. */
+function secondsToScopeEdge(a: Aircraft): number | null {
+  const { vx, vy } = velocity(a);
+  // Solve |p + v t| = R for t > 0.
+  const A = vx * vx + vy * vy;
+  const B = 2 * (a.x * vx + a.y * vy);
+  const C = a.x * a.x + a.y * a.y - RADAR_RANGE * RADAR_RANGE;
+  const disc = B * B - 4 * A * C;
+  if (A === 0 || disc < 0) return null;
+  const t = (-B + Math.sqrt(disc)) / (2 * A);
+  return t > 0 ? t : null;
+}
+
+/** Straight-line closest approach within the look-ahead window. */
+function predictedConflict(a: Aircraft, others: Aircraft[]): string | null {
+  const va = velocity(a);
+  let worst: { id: string; t: number; d: number } | null = null;
+  for (const b of others) {
+    if (b === a || b.phase === "final") continue;
+    if (Math.abs(a.alt - b.alt) >= SEP_FT && Math.abs(a.tgtAlt - b.tgtAlt) >= SEP_FT) continue;
+    const vb = velocity(b);
+    const rx = b.x - a.x;
+    const ry = b.y - a.y;
+    const wx = vb.vx - va.vx;
+    const wy = vb.vy - va.vy;
+    const w2 = wx * wx + wy * wy;
+    const t = w2 === 0 ? 0 : Math.max(0, Math.min(LOOKAHEAD_S, -(rx * wx + ry * wy) / w2));
+    const d = Math.hypot(rx + wx * t, ry + wy * t);
+    if (d < SEP_NM && (!worst || t < worst.t)) worst = { id: b.id, t, d };
+  }
+  return worst ? `on present headings it comes within ${worst.d.toFixed(1)} nm of ${worst.id} in ${Math.round(worst.t)} s` : null;
+}
+
+function factsFor(a: Aircraft, all: Aircraft[]): string[] {
+  const facts: string[] = [];
+  const d = dist(a, ORIGIN);
+  facts.push(`direct heading to the airport ${pad3(bearing(a, ORIGIN))}`);
+  if (a.phase === "vectoring" || a.phase === "holding") {
+    facts.push(d <= CLEARANCE_RANGE ? "close enough to be cleared to land" : `too far to be cleared to land (${d.toFixed(1)} nm, limit ${CLEARANCE_RANGE})`);
+    const nearestFix = Math.min(...RUNWAYS.map((r) => dist(a, RUNWAY_GEOMETRY[r].fix)));
+    const minutesToFix = nearestFix / (a.spd / 60);
+    const minutesToDescend = Math.max(0, a.alt - FIX_MAX_ALT) / DESCENT_FPM;
+    facts.push(
+      minutesToDescend <= minutesToFix
+        ? "low enough to reach the fix below 3500 ft if cleared now"
+        : `too high to reach the fix below 3500 ft if cleared now (needs ${minutesToDescend.toFixed(1)} min to descend, fix is ${minutesToFix.toFixed(1)} min away)`,
+    );
+    const edge = a.phase === "vectoring" ? secondsToScopeEdge(a) : null;
+    if (edge !== null && edge < 300) facts.push(`leaves the radar in ${Math.round(edge)} s on this heading`);
+  }
+  const conflict = predictedConflict(a, all);
+  if (conflict) facts.push(conflict);
+  return facts;
+}
+
 function radioLine(l: RadioLine): string {
   const who = l.to ? `${l.from} -> ${l.to}` : l.from;
   return `[${fmtClock(l.t)}] ${who}: ${l.kind === "call" || l.kind === "emergency" || l.kind === "notice" ? `"${l.text}"` : l.text}`;
 }
 
-export function describeState(w: World): string {
+export function describeState(w: World, { facts = false }: { facts?: boolean } = {}): string {
   const air = w.airborne().sort((a, b) => dist(a, ORIGIN) - dist(b, ORIGIN));
   const out: string[] = [`Approach control. Time ${fmtClock(w.t)}.`, "", RULES, "", "RUNWAYS"];
 
@@ -58,7 +120,10 @@ export function describeState(w: World): string {
 
   out.push("", "TRAFFIC (x = nm east, y = nm north of the airport)");
   if (!air.length) out.push("- none");
-  for (const a of air) out.push(`- ${aircraftLine(a)}`);
+  for (const a of air) {
+    out.push(`- ${aircraftLine(a)}`);
+    if (facts) out.push(`  Facts: ${factsFor(a, air).join("; ")}.`);
+  }
 
   out.push("", "CLOSE PAIRS (within 6 nm and 2000 ft)");
   const pairs: string[] = [];
