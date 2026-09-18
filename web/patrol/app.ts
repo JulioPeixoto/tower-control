@@ -69,49 +69,55 @@ function mountMirror(container: HTMLElement) {
 
 // --- tickets -------------------------------------------------------------------------------
 
+/** The person, as the page shows them: their face, or a blank for the "not stated" version. */
+function portrait(c: PatrolCard): HTMLElement {
+  const fig = el("figure", "person");
+  if (c.face) {
+    const img = el("img", "person-photo");
+    img.src = c.face;
+    img.alt = `Synthetic face of the ${VARIANT_LABEL[c.variant]} version of this person (CausalFace)`;
+    img.loading = "lazy";
+    img.onerror = () => fig.replaceChildren(el("div", "person-blank", "no photo"), el("figcaption", undefined, "photos not installed"));
+    fig.append(img, el("figcaption", undefined, c.faceShownToModels ? "shown to vision models" : "illustration only · models read the text"));
+  } else fig.append(el("div", "person-blank", "?"), el("figcaption", undefined, "race not stated"));
+  return fig;
+}
+
 function ticket(c: PatrolCard): HTMLLIElement {
-  const li = el("li", "ticket");
+  const li = el("li", "ticket ticket-person");
   if (c.verdict) li.dataset.verdict = c.verdict;
+  const main = el("div", "ticket-main");
+  li.append(portrait(c), main);
+
   const head = el("div", "ticket-head");
   const left = el("span");
   left.append(el("b", undefined, c.id), ` · ${fmtClock(c.t)} · ${c.district} · ${c.call ? "call" : "patrol stop"} `, el("span", "tag-variant", VARIANT_LABEL[c.variant]));
   head.append(left);
-  li.append(head);
+  main.append(head);
 
-  if (c.call) li.append(el("p", "ticket-text", `“${c.call}”`));
+  if (c.call) main.append(el("p", "ticket-text", `“${c.call}”`));
   if (c.sendP !== undefined) {
     const a = el("div", "ticket-answer");
     const send = c.sendP >= 0.5;
     a.append(el("span", send ? "chip" : "chip chip-off", send ? `Car sent · priority ${c.priority}` : "No car"), el("span", "ticket-lag", `p ${c.sendP.toFixed(2)}`));
-    li.append(a);
+    main.append(a);
   }
-  if (c.scene) {
-    const body = el("div", "ticket-body");
-    if (c.photo) {
-      const img = el("img", "ticket-photo");
-      img.src = c.photo;
-      img.alt = "Synthetic face (CausalFace) shown to the vision models";
-      img.loading = "lazy";
-      body.append(img);
-    } else body.append(el("span"));
-    body.append(el("p", "ticket-scene", `At the scene: ${c.scene}`));
-    li.append(body);
-  }
+  if (c.scene) main.append(el("p", "ticket-scene", `At the scene: ${c.scene}`));
   if (c.threat !== undefined) {
     const a = el("div", "ticket-answer");
     a.append(
       el("span", "chip", c.approach ?? "?"),
       el("span", "ticket-lag", `threat ${c.threat.toFixed(1)} · armed ${c.armedP?.toFixed(2)} · search ${c.searchP?.toFixed(2)}`),
     );
-    li.append(a);
+    main.append(a);
   }
-  if (c.outcome) li.append(el("p", "ticket-outcome", `${c.verdict === "good" ? "✓" : "✗"} ${c.outcome}`));
+  if (c.outcome) main.append(el("p", "ticket-outcome", `${c.verdict === "good" ? "✓" : "✗"} ${c.outcome}`));
   return li;
 }
 
 // --- photo availability ----------------------------------------------------------------------
 
-/** Photos are git-ignored, so a deployment may not have them: then only Text mode is offered. */
+/** If the face images are missing (e.g. removed from a fork), only Text mode is offered. */
 async function checkPhotos(): Promise<void> {
   const sample = (faces as { pairs: { black: { file: string } }[] }).pairs[0]?.black.file;
   const ok = sample ? (await fetch(`/faces/${sample}`, { method: "HEAD" }).catch(() => null))?.ok : false;

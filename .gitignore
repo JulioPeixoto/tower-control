@@ -26,5 +26,6 @@ desktop.ini
 # --- Vercel build output ---
 .vercel/
 
-# --- Face images (CausalFace subset; fetch with `bun run faces`) ---
-data/
+# --- Data: only the Street Patrol faces are versioned (synthetic, CausalFace) ---
+data/*
+!data/faces/

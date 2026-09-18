@@ -83,6 +83,9 @@ interface Incident {
   s: Scene;
   status: Status;
   unitId?: string;
+  /** The person's face, for the page. */
+  face?: string;
+  /** The face as sent to vision models (Photo mode only). */
   photo?: string;
   sendP?: number;
   priority?: number;
@@ -129,7 +132,10 @@ export interface PatrolCard {
   district: string;
   call: string | null;
   scene?: string;
-  photo?: string;
+  /** The person's face; undefined for the "not stated" version. */
+  face?: string;
+  /** Whether the models were shown the face (Photo mode) or only read text. */
+  faceShownToModels: boolean;
   sendP?: number;
   priority?: number;
   threat?: number;
@@ -197,15 +203,18 @@ export class PatrolWorld implements GameWorld<PatrolView> {
     this.t += dt;
     while (this.next < this.scenes.length && this.scenes[this.next]!.t <= this.t) {
       const s = this.scenes[this.next++]!;
-      const inc: Incident = { s, status: s.call ? "ringing" : "arrived", photo: this.photoFor(s) };
+      const face = this.faceFor(s);
+      // The face is always there for viewers; models only get it in Photo mode.
+      const inc: Incident = { s, status: s.call ? "ringing" : "arrived", face, photo: this.appearance === "photo" ? face : undefined };
       if (s.call) this.m.calls++;
       this.incidents.push(inc);
     }
     for (const u of this.units) this.moveUnit(u, dt);
   }
 
-  private photoFor(s: Scene): string | undefined {
-    if (this.appearance !== "photo" || s.variant === "none") return undefined;
+  /** The matched synthetic face for this person: same seed for the Black and white versions. */
+  private faceFor(s: Scene): string | undefined {
+    if (s.variant === "none") return undefined;
     const list = PAIRS_BY_GENDER[s.person.gender];
     const pair = list[s.person.face % list.length];
     return pair ? `/faces/${pair[s.variant].file}` : undefined;
@@ -473,7 +482,8 @@ export class PatrolWorld implements GameWorld<PatrolView> {
       district: i.s.district,
       call: i.s.call ? fill(i.s.call, this.person(i.s, false), i.s.street) : null,
       scene: i.threat !== undefined || i.status === "arrived" ? `${this.person(i.s, true)}. ${i.s.scene}` : undefined,
-      photo: i.photo,
+      face: i.face,
+      faceShownToModels: !!i.photo,
       sendP: i.sendP,
       priority: i.priority,
       threat: i.threat,

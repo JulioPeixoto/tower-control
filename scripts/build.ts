@@ -60,8 +60,8 @@ const size = (n: number) => `${(n / 1024).toFixed(1)} KB`;
 for (const o of [...pages.outputs, ...fn.outputs]) console.log(`${o.path.replace(/\\/g, "/").split(".vercel/output/")[1]}  ${size(o.size)}`);
 console.log(`\nBuilt ${OUT}`);
 
-// Street Patrol photos (CausalFace subset) are published only if installed locally with
-// `bun run faces`; they are git-ignored, so a Vercel build from the repo has none by default.
+// Street Patrol faces (CausalFace subset, versioned in data/faces/). If they are missing, the
+// Patrol page offers Text mode only; `bun run faces` downloads them again.
 const { readdir, cp } = await import("node:fs/promises");
 const faces = await readdir("data/faces").catch(() => [] as string[]);
 if (faces.some((f) => f.endsWith(".jpg"))) {

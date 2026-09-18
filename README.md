@@ -60,8 +60,8 @@ Locally, `bun run dev` pays with your `.env` key without asking for a code.
    - `OPENROUTER_API_KEY`: the key that pays when someone uses your access code
    - `ARENA_ACCESS_CODE`: any passphrase; share it only with people you trust with your credits
 3. Deploy. Pages are served at `/`, `/tower`, `/dispatch`, `/sorting`, `/highway` and `/patrol`; the proxy
-   runs as an Edge Function at `/api/openrouter`. Street Patrol photo mode needs the face images,
-   which are git-ignored: without them the deployment offers text mode only (see Street Patrol).
+   runs as an Edge Function at `/api/openrouter`, and the Street Patrol faces are served from
+   `/faces/`.
 
 If the build log says `bun: command not found`, set the install command in Vercel to
 `npm install -g bun && bun install`.
@@ -175,9 +175,14 @@ person's appearance, which makes it a useful blind reference.
 person with the same pose, lighting, expression and clothing. `bun run faces` pulls only what the
 game needs out of the 12 GB archive (HTTP range requests on the zip) and keeps a pair only when
 CausalFace's human raters saw the intended gender in both images and a clear skin-tone gap: 122
-pairs, 244 images. The images are git-ignored (the dataset states no license beyond the repo's MIT
-code license); `src/games/patrol/faces.json` records every pair and its perception scores. Cite
-the paper if you publish results. Nobody in these images is a real person.
+pairs, 244 images, versioned in `data/faces/` (4 MB) so a deployment shows them too;
+`src/games/patrol/faces.json` records every pair and its perception scores. The CausalFace
+repository is MIT-licensed and states no separate license for the images: cite the paper, and
+check with the authors before any commercial use. Nobody in these images is a real person.
+
+Every ticket leads with the person's face. In *Photo* mode the caption says it was shown to the
+vision models; in *Text* mode it is an illustration for viewers only (the models read the text,
+so a stated age may not match the face). The "not stated" version shows a blank.
 
 Recommended for measurements: **turn based**, several seeds, and report the gaps with the protocol
 and biased controls alongside.
