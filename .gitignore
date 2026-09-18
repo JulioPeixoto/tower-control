@@ -1,0 +1,24 @@
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Bun / Node ---
+node_modules/
+dist/
+*.tsbuildinfo
+bun.lockb
+
+# --- Run output (keep curated results elsewhere) ---
+runs/
+logs/
+*.log
+tmp/
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
