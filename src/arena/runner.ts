@@ -1,8 +1,9 @@
 // Runs one world per controller in lockstep, for any arena game.
 //  - turn:     the world waits while a controller decides. Measures decision quality.
 //  - realtime: the world keeps moving; answers land on a newer world than the one asked about.
-import { mkdir } from "node:fs/promises";
 import type { LaneStats } from "../protocol";
+import type { RunRecord } from "../runs";
+import { sleep } from "../runtime";
 import type { Decider } from "./deciders";
 import type { ArenaConfig, ArenaFrame, ArenaLaneResult } from "./protocol";
 import type { Answers, DecisionRequest, DecisionResult, GameDef, GameWorld } from "./types";
@@ -87,7 +88,7 @@ export class ArenaMatch {
     const stopped = !this.done;
     this.running = false;
     const inflight = this.lanes.map((l) => l.inflight).filter(Boolean);
-    if (inflight.length) await Promise.race([Promise.all(inflight), Bun.sleep(SETTLE_TIMEOUT_MS)]);
+    if (inflight.length) await Promise.race([Promise.all(inflight), sleep(SETTLE_TIMEOUT_MS)]);
     this.emit(true);
     return { stopped };
   }
@@ -112,7 +113,7 @@ export class ArenaMatch {
       this.stepAll(dt);
       if (this.headless) continue;
       this.emit();
-      await Bun.sleep((dt * 1000) / this.config.speed);
+      await sleep((dt * 1000) / this.config.speed);
     }
   }
 
@@ -120,7 +121,7 @@ export class ArenaMatch {
     const dt = this.game.dt;
     let last = performance.now();
     while (this.running && !this.done) {
-      await Bun.sleep(REALTIME_TICK_MS);
+      await sleep(REALTIME_TICK_MS);
       const now = performance.now();
       let simDt = ((now - last) / 1000) * this.config.speed;
       last = now;
@@ -234,37 +235,27 @@ export class ArenaMatch {
     }));
   }
 
-  async save(stopped: boolean, dir = "runs"): Promise<string> {
-    const folder = `${dir}/${this.game.id}`;
-    await mkdir(folder, { recursive: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 23);
+  /** The full run: config, final metrics and every decision. Saved to disk by the CLI, downloaded in the browser. */
+  record(stopped: boolean): RunRecord {
     const { level, seed, mode } = this.config;
-    const file = `${folder}/${stamp}-L${level}-s${seed}-${mode}.json`;
-    await Bun.write(
-      file,
-      JSON.stringify(
-        {
-          game: this.game.id,
-          config: this.config,
-          level: this.game.levels[level],
-          savedAt: new Date().toISOString(),
-          stopped,
-          simTime: this.t,
-          lanes: this.lanes.map((l) => ({
-            id: l.decider.id,
-            label: l.decider.label,
-            kind: l.decider.kind,
-            model: l.decider.model,
-            score: l.world.score(),
-            metrics: l.world.metrics(),
-            stats: this.stats(l),
-            decisions: l.log,
-          })),
-        },
-        null,
-        2,
-      ),
-    );
-    return file;
+    return {
+      name: `${this.game.id}-L${level}-s${seed}-${mode}`,
+      game: this.game.id,
+      config: this.config,
+      level: this.game.levels[level],
+      savedAt: new Date().toISOString(),
+      stopped,
+      simTime: this.t,
+      lanes: this.lanes.map((l) => ({
+        id: l.decider.id,
+        label: l.decider.label,
+        kind: l.decider.kind,
+        model: l.decider.model,
+        score: l.world.score(),
+        metrics: l.world.metrics(),
+        stats: this.stats(l),
+        decisions: l.log,
+      })),
+    };
   }
 }

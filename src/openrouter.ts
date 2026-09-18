@@ -1,3 +1,8 @@
+// Calls to OpenRouter, with retries. How a request reaches OpenRouter is pluggable:
+//  - Bun (CLI benches, local server): directly, with OPENROUTER_API_KEY from .env
+//  - the browser: through this site's /api/openrouter proxy, which holds the key
+import { env, sleep } from "./runtime";
+
 const BASE = "https://openrouter.ai/api";
 
 export class OpenRouterError extends Error {
@@ -9,14 +14,24 @@ export class OpenRouterError extends Error {
   }
 }
 
-function headers(): Record<string, string> {
-  const key = process.env.OPENROUTER_API_KEY;
+/** Sends one POST to an OpenRouter API path (e.g. "/alpha/decisions") and returns the raw response. */
+export type Transport = (path: string, body: unknown, signal: AbortSignal) => Promise<Response>;
+
+const direct: Transport = (path, body, signal) => {
+  const key = env("OPENROUTER_API_KEY");
   if (!key) throw new OpenRouterError(0, "OPENROUTER_API_KEY is not set. Add it to .env");
-  return {
-    Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json",
-    "X-OpenRouter-Title": "Tower Control",
-  };
+  return fetch(BASE + path, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-OpenRouter-Title": "Decision Arena" },
+    body: JSON.stringify(body),
+    signal,
+  });
+};
+
+let transport: Transport = direct;
+
+export function setTransport(t: Transport): void {
+  transport = t;
 }
 
 function errorMessage(text: string): string {
@@ -33,15 +48,10 @@ export async function openrouter<T>(path: string, body: unknown, { retries = 3, 
   let lastError: unknown;
   let waitMs = 0;
   for (let attempt = 0; attempt <= retries; attempt++) {
-    if (attempt > 0) await Bun.sleep(waitMs || 300 * 2 ** (attempt - 1));
+    if (attempt > 0) await sleep(waitMs || 300 * 2 ** (attempt - 1));
     waitMs = 0;
     try {
-      const res = await fetch(BASE + path, {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
+      const res = await transport(path, body, AbortSignal.timeout(timeoutMs));
       const text = await res.text();
       if (res.ok) return JSON.parse(text) as T;
       const detail = errorMessage(text);

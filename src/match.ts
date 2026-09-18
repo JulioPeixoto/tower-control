@@ -2,9 +2,10 @@
 //  - turn:     the world pauses while controllers decide. Measures decision quality only.
 //  - realtime: the world keeps moving while controllers decide; answers land on a newer
 //              picture than the one they were based on. Latency becomes part of the score.
-import { mkdir } from "node:fs/promises";
 import type { Controller, Decision } from "./controllers/types";
 import type { Frame, LaneFrame, LaneResult, LaneStats, MatchConfig } from "./protocol";
+import type { RunRecord } from "./runs";
+import { sleep } from "./runtime";
 import { describeState } from "./sim/describe";
 import { buildQuestions } from "./sim/questions";
 import { LEVELS, generateScenario } from "./sim/scenario";
@@ -96,7 +97,7 @@ export class Match {
     this.running = false;
 
     const inflight = this.lanes.map((l) => l.inflight).filter(Boolean);
-    if (inflight.length) await Promise.race([Promise.all(inflight), Bun.sleep(SETTLE_TIMEOUT_MS)]);
+    if (inflight.length) await Promise.race([Promise.all(inflight), sleep(SETTLE_TIMEOUT_MS)]);
     this.emit(true);
     return { stopped };
   }
@@ -116,14 +117,14 @@ export class Match {
       this.stepAll(DT);
       if (this.headless) continue;
       this.emit();
-      await Bun.sleep((DT * 1000) / this.config.speed);
+      await sleep((DT * 1000) / this.config.speed);
     }
   }
 
   private async runRealtime(): Promise<void> {
     let last = performance.now();
     while (this.running && !this.done) {
-      await Bun.sleep(REALTIME_TICK_MS);
+      await sleep(REALTIME_TICK_MS);
       const now = performance.now();
       let simDt = ((now - last) / 1000) * this.config.speed;
       last = now;
@@ -240,36 +241,27 @@ export class Match {
     }));
   }
 
-  /** Writes the full run (config, metrics and every decision) to runs/. Returns the path. */
-  async save(stopped: boolean, dir = "runs"): Promise<string> {
-    await mkdir(dir, { recursive: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 23);
+  /** The full run: config, final metrics and every decision. Saved to disk by the CLI, downloaded in the browser. */
+  record(stopped: boolean): RunRecord {
     const { level, seed, mode } = this.config;
-    const file = `${dir}/${stamp}-L${level}-s${seed}-${mode}.json`;
-    await Bun.write(
-      file,
-      JSON.stringify(
-        {
-          config: this.config,
-          level: LEVELS[level]?.name,
-          savedAt: new Date().toISOString(),
-          stopped,
-          simTime: this.t,
-          lanes: this.lanes.map((l) => ({
-            id: l.controller.id,
-            label: l.controller.label,
-            kind: l.controller.kind,
-            model: l.controller.model,
-            score: score(l.world.metrics),
-            metrics: l.world.metrics,
-            stats: this.stats(l),
-            decisions: l.log,
-          })),
-        },
-        null,
-        2,
-      ),
-    );
-    return file;
+    return {
+      name: `tower-L${level}-s${seed}-${mode}${this.config.facts ? "-facts" : ""}`,
+      game: "tower",
+      config: this.config,
+      level: LEVELS[level]?.name,
+      savedAt: new Date().toISOString(),
+      stopped,
+      simTime: this.t,
+      lanes: this.lanes.map((l) => ({
+        id: l.controller.id,
+        label: l.controller.label,
+        kind: l.controller.kind,
+        model: l.controller.model,
+        score: score(l.world.metrics),
+        metrics: l.world.metrics,
+        stats: this.stats(l),
+        decisions: l.log,
+      })),
+    };
   }
 }

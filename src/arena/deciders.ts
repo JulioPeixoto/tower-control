@@ -1,5 +1,5 @@
 // Who answers the typed questions: Jev (native), an LLM (JSON schema), or a game's bot.
-import { PRESETS } from "../controllers/index";
+import { MODELS } from "../models";
 import { openrouter } from "../openrouter";
 import { acquire } from "../ratelimit";
 import type { Answer, Answers, DecisionRequest, DecisionResult, GameDef, GameWorld, Questions, TypedQuestion } from "./types";
@@ -21,7 +21,6 @@ export interface DeciderInfo {
   model?: string;
 }
 
-const MODEL_PRESETS = PRESETS.filter((p) => p.kind !== "bot");
 const JEV_MAX_QUESTIONS = 64;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -162,7 +161,7 @@ function llmDecider(id: string, label: string, model: string, reasoningEffort = 
 
 export function deciderInfos(game: GameDef): DeciderInfo[] {
   return [
-    ...MODEL_PRESETS.map((p) => ({ id: p.id, label: p.label, kind: p.kind as DeciderKind, model: p.model })),
+    ...MODELS.map((p) => ({ id: p.id, label: p.label, kind: p.kind as DeciderKind, model: p.model })),
     ...Object.entries(game.bots).map(([id, b]) => ({ id, label: b.label, kind: "bot" as const })),
   ];
 }
@@ -189,7 +188,7 @@ export function makeDecider(spec: string, game: GameDef, seed: number): Decider 
     };
   }
 
-  const preset = MODEL_PRESETS.find((p) => p.id === spec);
+  const preset = MODELS.find((p) => p.id === spec);
   if (!preset?.model) throw new Error(`Unknown controller "${spec}" for ${game.title}.`);
   return preset.kind === "jev" ? jevDecider(preset.id, preset.label, preset.model) : llmDecider(preset.id, preset.label, preset.model);
 }

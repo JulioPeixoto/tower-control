@@ -1,3 +1,4 @@
+import { MODELS } from "../models";
 import { fifoController, randomController } from "./bots";
 import { jevController } from "./jev";
 import { llmController } from "./llm";
@@ -11,10 +12,7 @@ export interface ControllerInfo {
 }
 
 export const PRESETS: ControllerInfo[] = [
-  { id: "jev", label: "Jev 1.13", kind: "jev", model: "typesafe/jev-1.13" },
-  { id: "luna", label: "GPT-5.6 Luna", kind: "llm", model: "openai/gpt-5.6-luna" },
-  { id: "haiku", label: "Claude Haiku 4.5", kind: "llm", model: "anthropic/claude-haiku-4.5" },
-  { id: "flash-lite", label: "Gemini 3.5 Flash-Lite", kind: "llm", model: "google/gemini-3.5-flash-lite" },
+  ...MODELS,
   { id: "fifo", label: "FIFO bot", kind: "bot" },
   { id: "random", label: "Random bot", kind: "bot" },
 ];

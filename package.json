@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun src/server.ts",
+    "build": "bun scripts/build.ts",
+    "preview": "bun scripts/preview.ts",
     "bench": "bun src/bench.ts",
     "arena": "bun src/arena/bench.ts",
     "smoke": "bun scripts/smoke.ts",

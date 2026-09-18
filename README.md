@@ -28,11 +28,59 @@ bun run dev                 # http://localhost:3000
 ```
 
 Open the home page, pick a game, the level, seed, clock and controllers, then press **Start
-match**. The bots work without an API key. A match stops by itself when its last browser tab
-closes, so nothing spends credits in the background.
+match**. The bots work without an API key. When a match ends, **Download the run (JSON)** saves
+every decision for analysis.
 
 Every game page takes URL parameters, handy for recordings:
 `/dispatch?autostart=1&level=4&seed=7&mode=realtime&speed=16&controllers=jev,luna,haiku`
+
+## How it runs
+
+Matches run **in the browser tab**: the simulators, the questions and the scoring are plain
+TypeScript bundled into each page. The only server-side code is a small proxy,
+`POST /api/openrouter` (`src/proxy.ts`), that forwards model calls to OpenRouter so the key never
+reaches the page. It only accepts the two endpoints and the models the arena uses.
+
+Who pays for a model call:
+
+1. **A visitor's own OpenRouter key**, if they enter one under **Model access** (top right).
+2. **Your key** (`OPENROUTER_API_KEY`), if they enter the **access code** you gave them
+   (`ARENA_ACCESS_CODE`).
+3. Otherwise the call is refused. Bots always work, so anyone can try the games for free.
+
+Locally, `bun run dev` pays with your `.env` key without asking for a code.
+
+## Deploy to Vercel
+
+1. Push the repo to GitHub and import it in Vercel (**Add New → Project**). The included
+   `vercel.json` sets everything: install with Bun, build with `bun run build`. Leave the
+   framework preset as **Other**.
+2. In **Settings → Environment Variables**, add:
+   - `OPENROUTER_API_KEY`: the key that pays when someone uses your access code
+   - `ARENA_ACCESS_CODE`: any passphrase; share it only with people you trust with your credits
+3. Deploy. Pages are served at `/`, `/tower`, `/dispatch`, `/sorting` and `/highway`; the proxy
+   runs as an Edge Function at `/api/openrouter`.
+
+If the build log says `bun: command not found`, set the install command in Vercel to
+`npm install -g bun && bun install`.
+
+`bun run build` writes Vercel's Build Output API format to `.vercel/output` (static pages, the
+Edge Function and the routes), so no framework detection is involved. To try the production
+build locally, exactly as deployed (the proxy asks for the access code):
+
+```sh
+bun run build
+ARENA_ACCESS_CODE=something bun run preview   # http://localhost:3001
+```
+
+Things to know about a public deployment:
+
+- Anyone with the access code spends your OpenRouter credits. Change the code in Vercel to cut
+  access, and consider a spending limit on the key in OpenRouter's settings.
+- Latency shown in the browser includes the hop through the proxy. Use the CLI (below) for
+  latency numbers you want to publish.
+- The per-model rate limit is per browser tab. Several people using the same key at once share
+  OpenRouter's per-minute cap and may see a few retried 429s.
 
 ## Two clocks
 
@@ -123,7 +171,8 @@ Controllers: `jev`, `luna`, `haiku`, `flash-lite`, each game's bots, or any Open
 - Same seed, same text, same questions and options for every controller. Scenario scripts never
   depend on what a controller does.
 - Model versions are pinned (`typesafe/jev-1.13`, not `jev-latest`).
-- Latency is wall-clock time around the whole call, retries included, from this machine.
+- Latency is wall-clock time around the whole call, retries included. The CLI measures it from
+  this machine directly; in the browser it also includes the hop through the proxy.
 - Cost is OpenRouter's own `usage.cost` for every response. Jev counts more input tokens than an
   LLM for the same request (5.4k vs 4.2k for Luna on a 125-bay "flat" choice), but at $0.042 per
   million it stayed the cheapest per decision in every game ($0.00023 vs $0.0011 Luna and $0.0051
@@ -150,11 +199,15 @@ src/
   arena/        typed questions, Jev/LLM/bot deciders, generic runner, protocol, bench
   games/        dispatch/, sorting/, highway/ (simulators, text, bots)
   sim/          Tower Control simulator; controllers/, match.ts: its engine
-  server.ts     Bun server: pages and one WebSocket per game
+  engines.ts    runs matches in the page and speaks the pages' message protocol
+  openrouter.ts model calls with retries; direct (CLI) or through the proxy (browser)
+  proxy.ts      the OpenRouter proxy: who pays, allowed models and endpoints
+  edge/         the proxy as a Vercel Edge Function
+  server.ts     local dev server: pages and the proxy
 web/
   home/         the arena home
-  shared/       console CSS and the generic game client
+  shared/       console CSS, the generic game client, model access, run download
   tower/ dispatch/ sorting/ highway/   one page per game
-docs/           notes on Jev in the wild
-scripts/        probes, overnight pass, debugging helpers
+docs/           notes on Jev in the wild, first results
+scripts/        build (Vercel output), preview, probes, overnight pass, debugging helpers
 ```

@@ -6,6 +6,7 @@ import { GAMES } from "../games/index";
 import type { Mode } from "../protocol";
 import { makeDecider } from "./deciders";
 import { ArenaMatch } from "./runner";
+import { saveRun } from "../runs";
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -46,7 +47,7 @@ for (const seed of parseSeeds(values.seeds!)) {
   const match = new ArenaMatch(game, config, controllers.map((c) => makeDecider(c, game, seed)), mode === "turn");
   const started = performance.now();
   const { stopped } = await match.run();
-  const file = await match.save(stopped);
+  const file = await saveRun(match.record(stopped));
   console.log(`seed ${seed}: ${((performance.now() - started) / 1000).toFixed(1)} s wall, saved ${file}`);
   for (const r of match.results()) {
     rows.push({

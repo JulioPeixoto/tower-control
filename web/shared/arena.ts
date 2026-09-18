@@ -1,9 +1,14 @@
 // Browser side shared by the arena games: console header, setup form, one panel per
-// controller (strip, game body, board, feed), WebSocket plumbing and end-of-match stamp.
+// controller (strip, game body, board, feed), the match engine and end-of-match stamp.
+// Matches run in this tab; model calls go through the /api/openrouter proxy.
 // A game only supplies how to draw its world and which six numbers go on the board.
 import type { ArenaClientMessage, ArenaConfig, ArenaFrame, ArenaLaneFrame, ArenaLaneResult, ArenaServerMessage, GameInfo, Mode } from "../../src/arena/protocol";
 import type { FeedLine } from "../../src/arena/types";
+import { arenaEngine } from "../../src/engines";
+import type { RunRecord } from "../../src/runs";
 import { fmtClock } from "../../src/sim/geometry";
+import { accessButton, hasAccess, openAccessDialog } from "./access";
+import { downloadLink } from "./download";
 
 export interface BoardCell<V> {
   label: string;
@@ -75,7 +80,6 @@ export function runArena<V>(adapter: ArenaAdapter<V>): void {
   const params = new URLSearchParams(location.search);
   const panels = new Map<string, Panel<V>>();
   let info: GameInfo | null = null;
-  let ws: WebSocket | null = null;
   let running = false;
   let mode: Mode = "realtime";
   let matchId = 0;
@@ -92,10 +96,10 @@ export function runArena<V>(adapter: ArenaAdapter<V>): void {
   const form = el("form", "setup");
   const clock = el("div", "clock");
   const clockValue = el("span", "clock-value", "00:00");
-  clock.append(el("span", "field-label", "Sim time"), clockValue);
+  clock.append(accessButton(), el("span", "field-label", "Sim time"), clockValue);
   header.append(ident, form, clock);
 
-  const status = el("p", "status", "Connecting to the server…");
+  const status = el("p", "status", "Loading…");
   status.setAttribute("role", "status");
   const scopes = el("main", "scopes");
   document.body.append(header, status, scopes);
@@ -221,6 +225,12 @@ export function runArena<V>(adapter: ArenaAdapter<V>): void {
       setStatus("Pick at least one controller to start a match.", "error");
       return;
     }
+    const models = controllers.filter((id) => info!.controllers.find((c) => c.id === id)?.kind !== "bot");
+    if (models.length && !hasAccess()) {
+      setStatus("Models need model access. Set it, or pick only the bots.", "error");
+      openAccessDialog("To run the selected models, enter an access code or your own OpenRouter key.");
+      return;
+    }
     mode = data.get("mode") === "turn" ? "turn" : "realtime";
     const options = Object.fromEntries(info.options.map((o) => [o.key, String(data.get(`opt-${o.key}`) ?? o.default)]));
     const config: ArenaConfig = {
@@ -239,19 +249,11 @@ export function runArena<V>(adapter: ArenaAdapter<V>): void {
     setStatus(adapter.modeText[mode]);
   }
 
-  // --- connection ------------------------------------------------------------------
-  function connect(): void {
-    ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${adapter.gameId}`);
-    ws.onmessage = (ev) => handle(JSON.parse(String(ev.data)) as ArenaServerMessage<V>);
-    ws.onclose = () => {
-      setStatus("Lost the connection to the server. Reconnecting…", "error");
-      setRunning(false);
-      setTimeout(connect, 1500);
-    };
-  }
+  // --- engine ----------------------------------------------------------------------
+  const engine = arenaEngine(adapter.gameId, (msg) => handle(msg as ArenaServerMessage<V>));
 
   function send(msg: ArenaClientMessage): void {
-    ws?.send(JSON.stringify(msg));
+    engine.send(msg);
   }
 
   function handle(msg: ArenaServerMessage<V>): void {
@@ -268,7 +270,7 @@ export function runArena<V>(adapter: ArenaAdapter<V>): void {
         onFrame(msg);
         break;
       case "end":
-        if (msg.matchId === matchId) onEnd(msg.lanes, msg.file, msg.stopped);
+        if (msg.matchId === matchId) onEnd(msg.lanes, msg.stopped, msg.record);
         break;
       case "error":
         setStatus(msg.message, "error");
@@ -401,7 +403,7 @@ export function runArena<V>(adapter: ArenaAdapter<V>): void {
     );
   }
 
-  function onEnd(lanes: ArenaLaneResult[], file: string | null, stopped: boolean): void {
+  function onEnd(lanes: ArenaLaneResult[], stopped: boolean, record?: RunRecord): void {
     setRunning(false);
     const best = Math.max(...lanes.map((l) => l.score));
     for (const l of lanes) {
@@ -412,7 +414,8 @@ export function runArena<V>(adapter: ArenaAdapter<V>): void {
       .sort((a, b) => b.score - a.score)
       .map((l) => `${l.label} ${l.score}`)
       .join(" · ");
-    setStatus(`${stopped ? "Match stopped" : "Match over"}. ${ranking}.${file ? ` Full log saved to ${file}.` : ""}`);
+    setStatus(`${stopped ? "Match stopped" : "Match over"}. ${ranking}. `);
+    if (record) status.append(downloadLink(record));
   }
 
   // --- render loop ----------------------------------------------------------------------
@@ -425,5 +428,4 @@ export function runArena<V>(adapter: ArenaAdapter<V>): void {
     requestAnimationFrame(loop);
   };
   document.fonts.ready.then(() => requestAnimationFrame(loop));
-  connect();
 }

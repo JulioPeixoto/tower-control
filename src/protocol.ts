@@ -1,5 +1,6 @@
-// Messages between the server and the browser.
+// Messages between a match engine (src/engines.ts) and the Tower Control page.
 import type { ControllerInfo } from "./controllers/index";
+import type { RunRecord } from "./runs";
 import type { ControllerKind } from "./controllers/types";
 import type { Metrics, WorldView } from "./sim/types";
 
@@ -63,7 +64,7 @@ export interface LaneResult {
 export type ServerMessage =
   | { type: "hello"; controllers: ControllerInfo[]; levels: { level: number; name: string }[]; running: boolean }
   | Frame
-  | { type: "end"; matchId: number; stopped: boolean; file: string | null; lanes: LaneResult[] }
+  | { type: "end"; matchId: number; stopped: boolean; file: string | null; lanes: LaneResult[]; record?: RunRecord }
   | { type: "error"; message: string };
 
 export type ClientMessage = { type: "start"; config: MatchConfig } | { type: "stop" };

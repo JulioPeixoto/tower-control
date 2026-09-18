@@ -401,6 +401,114 @@ input[type="number"] {
 .radio .r-notice,
 .radio .r-good { color: var(--cyan); }
 
+/* --- model access ------------------------------------------------------------ */
+
+.access-button {
+  margin-bottom: 8px;
+  padding: 4px 9px;
+  font: 11px var(--font-ui);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--map);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.access-button::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--map);
+  vertical-align: 1px;
+}
+
+.access-button[data-open]::before {
+  background: var(--cyan);
+}
+
+.access-button:hover {
+  color: var(--label);
+}
+
+.access {
+  width: min(460px, calc(100vw - 32px));
+  padding: 0;
+  color: var(--label);
+  background: var(--console-2);
+  border: 1px solid var(--map);
+  border-radius: 4px;
+}
+
+.access::backdrop {
+  background: rgb(10 14 16 / 0.6);
+}
+
+.access-form {
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px 18px;
+}
+
+.access-title {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.access-why {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 2px;
+}
+
+.access-text,
+.access-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.access input {
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  font: 14px var(--font-ui);
+  color: var(--label);
+  background: var(--scope);
+  border: 1px solid var(--map);
+  border-radius: 3px;
+}
+
+.access-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.access-secondary {
+  height: 34px;
+  padding: 0 12px;
+  font: 12px var(--font-ui);
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--map);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.download {
+  color: var(--cyan);
+}
+
 /* Back to the arena home, above each game's title. */
 .back {
   display: inline-block;

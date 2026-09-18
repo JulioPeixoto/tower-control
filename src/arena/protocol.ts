@@ -1,3 +1,4 @@
+import type { RunRecord } from "../runs";
 import type { LaneStats, Mode } from "../protocol";
 import type { DeciderInfo, DeciderKind } from "./deciders";
 import type { FeedLine, GameOption } from "./types";
@@ -61,7 +62,7 @@ export interface ArenaLaneResult {
 export type ArenaServerMessage<V = unknown> =
   | { type: "hello"; game: GameInfo; running: boolean }
   | ArenaFrame<V>
-  | { type: "end"; matchId: number; stopped: boolean; file: string | null; lanes: ArenaLaneResult[] }
+  | { type: "end"; matchId: number; stopped: boolean; file: string | null; lanes: ArenaLaneResult[]; record?: RunRecord }
   | { type: "error"; message: string };
 
 export type ArenaClientMessage = { type: "start"; config: ArenaConfig } | { type: "stop" };

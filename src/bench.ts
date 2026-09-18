@@ -3,6 +3,7 @@
 import { parseArgs } from "node:util";
 import { makeController } from "./controllers/index";
 import { Match } from "./match";
+import { saveRun } from "./runs";
 import type { Mode } from "./protocol";
 
 const { values } = parseArgs({
@@ -37,7 +38,7 @@ for (const seed of parseSeeds(values.seeds!)) {
   const match = new Match(config, controllers.map((id) => makeController(id, seed)), mode === "turn");
   const started = performance.now();
   const { stopped } = await match.run();
-  const file = await match.save(stopped);
+  const file = await saveRun(match.record(stopped));
   console.log(`seed ${seed}: ${((performance.now() - started) / 1000).toFixed(1)} s wall, saved ${file}`);
   for (const r of match.results()) {
     const m = r.metrics;

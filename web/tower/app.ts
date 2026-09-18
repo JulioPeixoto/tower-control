@@ -1,7 +1,11 @@
 import type { ControllerInfo } from "../../src/controllers/index";
+import { towerEngine } from "../../src/engines";
 import type { ClientMessage, Frame, LaneFrame, LaneResult, MatchConfig, ServerMessage } from "../../src/protocol";
+import type { RunRecord } from "../../src/runs";
 import { fmtClock } from "../../src/sim/geometry";
 import type { RadioLine } from "../../src/sim/types";
+import { accessButton, hasAccess, openAccessDialog } from "../shared/access";
+import { downloadLink } from "../shared/download";
 import { drawRadar, readPalette } from "./radar";
 
 interface Panel {
@@ -29,33 +33,27 @@ const panels = new Map<string, Panel>();
 const DEFAULT_CONTROLLERS = ["jev", "luna", "haiku"];
 const IDLE_STATUS = "Pick the controllers and press Start match. Every scope gets the same traffic from the same seed.";
 
-let ws: WebSocket | null = null;
 let running = false;
 let currentMode: MatchConfig["mode"] = "realtime";
 let initialized = false;
+let controllerKinds = new Map<string, string>();
 /** Match shown on screen, and the newest match this page already left behind. */
 let matchId = 0;
 let ignoreUpTo = 0;
 
-// --- connection -------------------------------------------------------------
+// --- engine: matches run in this tab; model calls go through /api/openrouter ---------
 
-function connect(): void {
-  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
-  ws.onmessage = (ev) => handle(JSON.parse(String(ev.data)) as ServerMessage);
-  ws.onclose = () => {
-    setStatus("Lost the connection to the server. Reconnecting…", "error");
-    setRunning(false);
-    setTimeout(connect, 1500);
-  };
-}
+document.querySelector(".clock")!.prepend(accessButton());
+const engine = towerEngine((msg) => handle(msg));
 
 function send(msg: ClientMessage): void {
-  ws?.send(JSON.stringify(msg));
+  engine.send(msg);
 }
 
 function handle(msg: ServerMessage): void {
   switch (msg.type) {
     case "hello":
+      controllerKinds = new Map(msg.controllers.map((c) => [c.id, c.kind]));
       if (!initialized) setupForm(msg.controllers, msg.levels);
       setStatus(msg.running ? "A match is already running. Its scopes appear with the next update." : IDLE_STATUS);
       if (!initialized && params.has("autostart")) startMatch();
@@ -65,7 +63,7 @@ function handle(msg: ServerMessage): void {
       onFrame(msg);
       break;
     case "end":
-      if (msg.matchId === matchId) onEnd(msg.lanes, msg.file, msg.stopped);
+      if (msg.matchId === matchId) onEnd(msg.lanes, msg.stopped, msg.record);
       break;
     case "error":
       setStatus(msg.message, "error");
@@ -123,6 +121,11 @@ function startMatch(): void {
   const controllers = data.getAll("controllers").map(String);
   if (!controllers.length) {
     setStatus("Pick at least one controller to start a match.", "error");
+    return;
+  }
+  if (controllers.some((id) => controllerKinds.get(id) !== "bot") && !hasAccess()) {
+    setStatus("Models need model access. Set it, or pick only the bots.", "error");
+    openAccessDialog("To run the selected models, enter an access code or your own OpenRouter key.");
     return;
   }
   const mode = data.get("mode") === "turn" ? "turn" : "realtime";
@@ -274,7 +277,7 @@ function renderRadio(panel: Panel, radio: RadioLine[]): void {
   );
 }
 
-function onEnd(lanes: LaneResult[], file: string | null, stopped: boolean): void {
+function onEnd(lanes: LaneResult[], stopped: boolean, record?: RunRecord): void {
   setRunning(false);
   const best = Math.max(...lanes.map((l) => l.score));
   for (const l of lanes) {
@@ -286,7 +289,8 @@ function onEnd(lanes: LaneResult[], file: string | null, stopped: boolean): void
     .sort((a, b) => b.score - a.score)
     .map((l) => `${l.label} ${l.score}`)
     .join(" · ");
-  setStatus(`${stopped ? "Match stopped" : "Match over"}. ${ranking}.${file ? ` Full log saved to ${file}.` : ""}`);
+  setStatus(`${stopped ? "Match stopped" : "Match over"}. ${ranking}. `);
+  if (record) statusEl.append(downloadLink(record));
 }
 
 // --- render loop ------------------------------------------------------------
@@ -312,4 +316,3 @@ function loop(now: number): void {
 }
 
 document.fonts.ready.then(() => requestAnimationFrame(loop));
-connect();
