@@ -16,7 +16,8 @@ saved with each decision's latency, cost, tokens and answers.
 | **[Night Highway](#night-highway)** `/highway` | Left, stay or right | Reaction time; latency turned into distance |
 
 See [`docs/jev-in-the-wild.md`](docs/jev-in-the-wild.md) for how others are testing Jev and
-what shaped these games.
+what shaped these games, and [`docs/first-results.md`](docs/first-results.md) for a first pilot
+pass with real models (few seeds, with caveats).
 
 ## Quick start
 
