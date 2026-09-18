@@ -123,10 +123,12 @@ Controllers: `jev`, `luna`, `haiku`, `flash-lite`, each game's bots, or any Open
   depend on what a controller does.
 - Model versions are pinned (`typesafe/jev-1.13`, not `jev-latest`).
 - Latency is wall-clock time around the whole call, retries included, from this machine.
-- Cost is OpenRouter's own `usage.cost` for every response. Jev bills input tokens per question,
-  so questions with long option lists (Sorting Hub "flat") can cost more on Jev than on Luna.
+- Cost is OpenRouter's own `usage.cost` for every response. Jev counts more input tokens than an
+  LLM for the same request (5.4k vs 4.2k for Luna on a 125-bay "flat" choice), but at $0.042 per
+  million it stayed the cheapest per decision in every game ($0.00023 vs $0.0011 Luna and $0.0051
+  Haiku on that choice).
 - **Rate limits.** New OpenRouter accounts get 20 requests per minute per model (HTTP 429 above).
-  LLM calls are spaced to `OPENROUTER_RPM` (default 20); waiting for a slot is not counted as
+  LLM calls are spaced to `OPENROUTER_RPM` (default 18); waiting for a slot is not counted as
   latency, but in real time it still limits how often an LLM can decide. Raise `OPENROUTER_RPM`
   in `.env` when your account allows. Jev ran at ~30 per minute without hitting a limit.
 

@@ -48,7 +48,8 @@ export async function openrouter<T>(path: string, body: unknown, { retries = 3, 
       lastError = new OpenRouterError(res.status, detail.startsWith("HTTP ") ? detail : `HTTP ${res.status}: ${detail}`);
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get("retry-after"));
-        waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 3000 * 2 ** attempt;
+        // Per-minute windows: back off 5, 10, 20 s unless the server says otherwise.
+        waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 5000 * 2 ** attempt;
       } else if (res.status < 500) break;
     } catch (e) {
       if (e instanceof OpenRouterError && e.status === 0) throw e;

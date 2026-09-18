@@ -2,7 +2,8 @@
 // New OpenRouter accounts are limited to 20 requests per minute per model.
 const nextSlot = new Map<string, number>();
 
-export const DEFAULT_RPM = Number(process.env.OPENROUTER_RPM ?? 20);
+// 18 rather than 20: at exactly 20 the provider's window still let a few 429s through.
+export const DEFAULT_RPM = Number(process.env.OPENROUTER_RPM ?? 18);
 
 /** Resolves when the caller may send the next request for `key`. */
 export async function acquire(key: string, rpm = DEFAULT_RPM): Promise<void> {
