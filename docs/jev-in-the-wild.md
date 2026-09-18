@@ -90,6 +90,19 @@ reproducing Jev-like behaviour.
 - From raw geometry, Jev re-vectored almost every aircraft on every turn ("vector" in 78% of
   answers, median action confidence 0.52) and let 7 of 12 aircraft drift off the scope. This is
   the chess finding again: raw state in, weak judgment out. See the "facts" state mode.
+- **Raw vs facts, level 3, seed 42, turn based (one seed, anecdotal):** facts fixed exactly the
+  errors they describe and nothing else.
+
+  | | Refused clearances | Left the radar | Landed /12 | Separation losses |
+  |---|---|---|---|---|
+  | Jev | 11 → 8 | 5 → 1 | 2 → 3 | 8 → 19 |
+  | Luna | 52 → 5 | 0 → 0 | 5 → 4 | 4 → 25 |
+  | Haiku | 55 → 0 | 10 → 1 | 2 → 6 | 0 → 6 |
+  | FIFO bot | 0 | 0 | 8 | 3 |
+
+  With the facts, every model stopped asking for impossible clearances and stopped losing
+  aircraft off the scope, then started clearing everyone at once: separation losses went up and
+  a 40-line first-come-first-served bot still won. Facts help judgment; they do not supply a plan.
 
 ## What this means for our games
 
