@@ -1,0 +1,19 @@
+@import "../shared/base.css";
+
+.radar-wrap {
+  padding: 10px;
+}
+
+/* Keep the whole match on one screen, so it can be recorded. */
+.radar {
+  display: block;
+  width: min(100%, max(320px, calc(100vh - 420px)));
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+
+.lg-ac { stroke: var(--label); }
+.lg-ghost { stroke: var(--label); stroke-dasharray: 2 2; opacity: 0.6; }
+.lg-conflict { stroke: var(--amber); }
+.lg-cleared { stroke: var(--cyan); fill: var(--cyan); }
+.lg-emergency { stroke: var(--red); fill: var(--red); }

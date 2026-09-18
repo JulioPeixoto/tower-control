@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Decision Arena</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=B612:ital,wght@0,400;0,700;1,400&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./home.css" />
+  </head>
+  <body>
+    <header class="console home-head">
+      <div class="ident">
+        <h1 class="ident-name">Decision Arena</h1>
+        <p class="ident-sub">System One vs small LLMs, side by side</p>
+      </div>
+      <p class="roster">
+        <span class="field-label">On the board</span>
+        <span>Jev 1.13 · GPT-5.6 Luna · Claude Haiku 4.5 · Gemini 3.5 Flash-Lite · rule-based bots</span>
+      </p>
+    </header>
+
+    <main class="home">
+      <p class="lede">
+        Every game gives each controller its own copy of the same world, from the same seed. They read the same text and
+        answer the same typed questions. Then you watch who decides well, who decides fast, and what it costs.
+      </p>
+
+      <ol class="bay" aria-label="Games">
+        <li>
+          <a class="card" href="/tower" style="--holder: #2f6f79">
+            <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true">
+              <circle cx="32" cy="32" r="28" class="g-line" />
+              <circle cx="32" cy="32" r="18" class="g-faint" />
+              <path d="M26 30h14M26 34h14" class="g-strong" />
+              <rect x="44" y="14" width="4" height="4" class="g-dot" />
+              <rect x="12" y="40" width="4" height="4" class="g-hot" />
+            </svg>
+            <span class="card-main">
+              <span class="card-name">Tower Control</span>
+              <span class="card-line">Land every aircraft on two runways. Emergencies and runway closures arrive only as radio text.</span>
+            </span>
+            <span class="card-tests">
+              <span class="tag">Long horizon</span><span class="tag">Latency</span><span class="tag">Raw vs facts</span>
+            </span>
+            <span class="card-q">4 choices per aircraft</span>
+            <span class="card-go">Open</span>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="/dispatch" style="--holder: #c8322f">
+            <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M8 20h48M8 32h48M8 44h48M20 8v48M32 8v48M44 8v48" class="g-faint" />
+              <circle cx="38" cy="26" r="6" class="g-hot-fill" />
+              <rect x="14" y="41" width="12" height="7" class="g-chip" />
+            </svg>
+            <span class="card-main">
+              <span class="card-name">City Dispatch</span>
+              <span class="card-line">Emergency calls as transcripts. Send a unit or not, which service, how urgent. Pranks and injected orders included.</span>
+            </span>
+            <span class="card-tests">
+              <span class="tag">Language</span><span class="tag">Calibration</span><span class="tag">Injection</span>
+            </span>
+            <span class="card-q">noul · choice · score</span>
+            <span class="card-go">Open</span>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="/sorting" style="--holder: #b98a52">
+            <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M32 8v12M32 20L14 36M32 20v16M32 20l18 16M14 36l-6 18M14 36l6 18M32 36v18M50 36l-6 18M50 36l6 18" class="g-line" />
+              <rect x="28" y="4" width="8" height="8" class="g-box" />
+            </svg>
+            <span class="card-main">
+              <span class="card-name">Sorting Hub</span>
+              <span class="card-line">Route parcels down a decision tree to the right bay. Pick the bay at once, walk the tree, or extract facts and let code walk it.</span>
+            </span>
+            <span class="card-tests">
+              <span class="tag">Hierarchy</span><span class="tag">255-option limit</span><span class="tag">Throughput</span>
+            </span>
+            <span class="card-q">choice · noul</span>
+            <span class="card-go">Open</span>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="/highway" style="--holder: #d9822b">
+            <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M18 4v56M46 4v56" class="g-line" />
+              <path d="M32 6v8M32 22v8M32 38v8M32 54v6" class="g-faint" />
+              <rect x="22" y="12" width="8" height="4" class="g-hot" />
+              <rect x="36" y="44" width="6" height="10" class="g-chip" />
+            </svg>
+            <span class="card-main">
+              <span class="card-name">Night Highway</span>
+              <span class="card-line">Five lanes, barriers ahead, one move at a time. In real time the road never waits for an answer.</span>
+            </span>
+            <span class="card-tests">
+              <span class="tag">Reaction time</span><span class="tag">Raw vs facts</span>
+            </span>
+            <span class="card-q">1 choice per tick</span>
+            <span class="card-go">Open</span>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="/patrol" style="--holder: #3d4f86">
+            <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M8 20h48M8 32h48M8 44h48M20 8v48M32 8v48M44 8v48" class="g-faint" />
+              <circle cx="22" cy="30" r="7" class="g-line" />
+              <circle cx="42" cy="30" r="7" class="g-line" />
+              <path d="M14 50h16M34 50h16" class="g-strong" />
+            </svg>
+            <span class="card-main">
+              <span class="card-name">Street Patrol</span>
+              <span class="card-line">Police calls and scenes played three times: the person described as Black, as white, or with no race stated. Does the decision change?</span>
+            </span>
+            <span class="card-tests">
+              <span class="tag">Bias</span><span class="tag">Counterfactual pairs</span><span class="tag">Text vs photo</span>
+            </span>
+            <span class="card-q">noul · choice · score</span>
+            <span class="card-go">Open</span>
+          </a>
+        </li>
+      </ol>
+
+      <div class="notes">
+        <section>
+          <h2 class="notes-title">How a match works</h2>
+          <dl class="how">
+            <dt>Same world</dt>
+            <dd>A seed generates the traffic, calls, parcels or road. Every controller gets its own identical copy.</dd>
+            <dt>Same questions</dt>
+            <dd>Jev receives typed questions natively. LLMs get the same options and wording as a strict JSON schema.</dd>
+            <dt>Two clocks</dt>
+            <dd>Turn based pauses the world while a controller thinks. Real time keeps it moving, so slow answers land late.</dd>
+            <dt>Everything logged</dt>
+            <dd>Each decision's latency, tokens, cost and answers can be downloaded as JSON after every match.</dd>
+          </dl>
+        </section>
+        <section>
+          <h2 class="notes-title">What others have found so far</h2>
+          <ul class="found">
+            <li>Speed and price hold up in every independent test: 0.2–0.7 s and a fraction of a cent per call.</li>
+            <li>From a raw chess board Jev plays worse than random; given code-computed facts it plays around 950 Elo. <a href="https://github.com/wondertwins/jev-benchmark">wondertwins/jev-benchmark</a></li>
+            <li>One big choice beat a two-step choice (piece, then square) in the same chess tests.</li>
+            <li>Nobody has published a reliability curve for Jev yet. City Dispatch draws one live.</li>
+            <li>The founder agreed it is "basically a zero-shot classifier". <a href="https://news.ycombinator.com/item?id=49717558">Hacker News</a></li>
+          </ul>
+          <p class="found-more">Full notes with sources: <code>docs/jev-in-the-wild.md</code></p>
+        </section>
+        <section>
+          <h2 class="notes-title">First pass in this arena (pilot, few seeds)</h2>
+          <ul class="found">
+            <li>Sorting Hub: Jev routed every parcel right when extracting or walking the tree. With reasoning off, Luna and Haiku read pounds as kilograms.</li>
+            <li>Choosing among 125 bays at once: Jev 21/24, Luna and Haiku 10/24. Above 255 bays Jev cannot answer at all.</li>
+            <li>Night Highway: code-computed facts took Jev from 5 crashes to 0. In real time the LLMs crashed 10–13 times (with a rate-limit caveat).</li>
+            <li>City Dispatch: no model fell for a prank or an injected order. Level 4 is too easy to separate them.</li>
+            <li>Tower Control: facts removed the errors they describe, but nobody learned to sequence arrivals. A 40-line bot still wins.</li>
+          </ul>
+          <p class="found-more">Numbers and caveats: <code>docs/first-results.md</code></p>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="./home.ts"></script>
+  </body>
+</html>

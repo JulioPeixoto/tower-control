@@ -1,0 +1,53 @@
+@import "../shared/base.css";
+
+:root {
+  /* A sorting floor at night: concrete, rubber belts, kraft parcels, safety yellow. */
+  --hub-floor: #2a2723;
+  --hub-belt: #3f3a33;
+  --hub-tube: #6b6357;
+  --hub-tube-hot: #a39680;
+  --hub-kraft: #c9a06a;
+  --hub-kraft-edge: #6e5331;
+  --hub-safety: #f2c230;
+  --hub-good: #7cc47f;
+  --hub-label: #efe6d2;
+}
+
+.hub-stage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: calc(100vh - 430px);
+  min-height: 300px;
+  margin: 0 auto;
+  border-radius: 3px;
+}
+
+.label-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  min-height: 2.9em;
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--hub-kraft);
+  border-left: 4px solid var(--hub-kraft-edge);
+  border-radius: 2px;
+}
+
+.label-card b {
+  font: 700 11px "B612 Mono", monospace;
+}
+
+.label-card span {
+  font-style: italic;
+}
+
+.lg-parcel { fill: var(--hub-kraft); stroke: var(--hub-kraft-edge); }
+.lg-waiting { fill: var(--hub-kraft); stroke: var(--hub-safety); stroke-width: 2; }
+.lg-good { fill: var(--hub-good); }
+.lg-bad { fill: var(--red); }

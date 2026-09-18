@@ -1,0 +1,41 @@
+@import "../shared/base.css";
+@import "../shared/city.css";
+@import "../shared/tickets.css";
+
+.panel-body {
+  display: grid;
+  gap: 10px;
+}
+
+.calib {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4px 12px;
+  padding: 0 2px;
+}
+
+.calib-title {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.calib-brier {
+  font: 700 12px var(--font-data);
+  color: var(--label);
+}
+
+.calib canvas {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  height: 96px;
+}
+
+.lg-critical { fill: var(--prio-critical); }
+.lg-urgent { fill: var(--prio-urgent); }
+.lg-low { fill: var(--prio-low); }
+.lg-ringing { stroke: var(--label); stroke-dasharray: 2 2; }
+.lg-unit { fill: var(--paper); }

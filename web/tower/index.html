@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tower Control</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="console">
+      <div class="ident">
+        <a class="back" href="/">Decision Arena</a>
+        <h1 class="ident-name">Tower Control</h1>
+        <p class="ident-sub">Approach · runways 09L / 09R</p>
+      </div>
+
+      <form class="setup" id="setup">
+        <label class="field">
+          <span class="field-label">Traffic</span>
+          <select name="level" id="level"></select>
+        </label>
+        <label class="field">
+          <span class="field-label">Seed</span>
+          <input name="seed" type="number" min="1" value="42" />
+        </label>
+        <div class="field" role="group" aria-labelledby="mode-label">
+          <span class="field-label" id="mode-label">Clock</span>
+          <div class="toggles">
+            <label class="toggle"><input type="radio" name="mode" value="realtime" checked /><span>Real time</span></label>
+            <label class="toggle"><input type="radio" name="mode" value="turn" /><span>Turn based</span></label>
+          </div>
+        </div>
+        <div class="field" role="group" aria-labelledby="state-label" title="Facts adds exact, code-computed facts per aircraft to the text every controller reads">
+          <span class="field-label" id="state-label">State text</span>
+          <div class="toggles">
+            <label class="toggle"><input type="radio" name="state" value="raw" checked /><span>Raw</span></label>
+            <label class="toggle"><input type="radio" name="state" value="facts" /><span>Facts</span></label>
+          </div>
+        </div>
+        <label class="field">
+          <span class="field-label">Sim speed</span>
+          <select name="speed">
+            <option value="4">4×</option>
+            <option value="8" selected>8×</option>
+            <option value="12">12×</option>
+            <option value="16">16×</option>
+          </select>
+        </label>
+        <div class="field" role="group" aria-labelledby="ctl-label">
+          <span class="field-label" id="ctl-label">Controllers</span>
+          <div class="toggles" id="controllers"></div>
+        </div>
+        <button type="submit" class="go" id="go">Start match</button>
+      </form>
+
+      <div class="clock">
+        <span class="field-label">Sim time</span>
+        <span class="clock-value" id="clock">00:00</span>
+      </div>
+    </header>
+
+    <p class="status" id="status" role="status">Loading…</p>
+
+    <main class="scopes" id="scopes"></main>
+
+    <footer class="legend" aria-label="Legend">
+      <span><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="3" y="3" width="6" height="6" class="lg-ac" /></svg>Aircraft, with a one-minute speed vector</span>
+      <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11 6 L6 11 L1 6 Z" class="lg-ghost" /></svg>Ghost: where the controller last saw it (real time)</span>
+      <span><svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" class="lg-conflict" /></svg>Separation lost</span>
+      <span><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="3" y="3" width="6" height="6" class="lg-cleared" /></svg>Cleared to land</span>
+      <span><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="3" y="3" width="6" height="6" class="lg-emergency" /></svg>Emergency</span>
+    </footer>
+
+    <template id="scope-tpl">
+      <section class="scope">
+        <header class="strip">
+          <div class="strip-id">
+            <h2 class="strip-name"></h2>
+            <p class="strip-model"></p>
+          </div>
+          <dl class="strip-stats">
+            <div><dt>p50</dt><dd data-k="p50">–</dd></div>
+            <div><dt>p95</dt><dd data-k="p95">–</dd></div>
+            <div><dt>Spent</dt><dd data-k="cost">–</dd></div>
+            <div><dt>Calls</dt><dd data-k="calls">0</dd></div>
+          </dl>
+          <p class="strip-state" data-k="state">Waiting for traffic</p>
+          <span class="stamp" hidden>Best score</span>
+        </header>
+        <div class="radar-wrap"><canvas class="radar" role="img"></canvas></div>
+        <dl class="board">
+          <div><dt>Landed</dt><dd data-k="landed">0</dd></div>
+          <div><dt>Lost</dt><dd data-k="lost">0</dd></div>
+          <div><dt>Sep. loss</dt><dd data-k="los">0</dd></div>
+          <div><dt>Go-arounds</dt><dd data-k="ga">0</dd></div>
+          <div><dt>Avg delay</dt><dd data-k="delay">–</dd></div>
+          <div class="board-score"><dt>Score</dt><dd data-k="score">0</dd></div>
+        </dl>
+        <ol class="radio" aria-label="Radio log"></ol>
+      </section>
+    </template>
+
+    <script type="module" src="./app.ts"></script>
+  </body>
+</html>
