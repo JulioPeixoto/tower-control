@@ -44,7 +44,8 @@ export async function openrouter<T>(path: string, body: unknown, { retries = 3, 
       });
       const text = await res.text();
       if (res.ok) return JSON.parse(text) as T;
-      lastError = new OpenRouterError(res.status, `HTTP ${res.status}: ${errorMessage(text)}`);
+      const detail = errorMessage(text);
+      lastError = new OpenRouterError(res.status, detail.startsWith("HTTP ") ? detail : `HTTP ${res.status}: ${detail}`);
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get("retry-after"));
         waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 3000 * 2 ** attempt;
