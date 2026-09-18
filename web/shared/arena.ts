@@ -9,6 +9,7 @@ import type { RunRecord } from "../../src/runs";
 import { fmtClock } from "../../src/sim/geometry";
 import { accessButton, hasAccess, openAccessDialog } from "./access";
 import { downloadLink } from "./download";
+import "./images";
 
 export interface BoardCell<V> {
   label: string;

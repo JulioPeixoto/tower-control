@@ -1,0 +1,12 @@
+:root {
+  /* A printed municipal map in a dark console. Colour on the map means priority. */
+  --city-land: #d8dcd4;
+  --city-block: #cbd0c6;
+  --city-street: #eef0ea;
+  --city-water: #8fb0bd;
+  --city-ink: #34403f;
+  --city-ink-soft: #6f7a76;
+  --prio-critical: #c8322f;
+  --prio-urgent: #d0840f;
+  --prio-low: #2f7f8a;
+}

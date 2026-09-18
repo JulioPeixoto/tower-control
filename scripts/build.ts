@@ -6,7 +6,7 @@
 import { mkdir, rm } from "node:fs/promises";
 
 const OUT = ".vercel/output";
-const PAGES = ["home", "tower", "dispatch", "sorting", "highway"];
+const PAGES = ["home", "tower", "dispatch", "sorting", "highway", "patrol"];
 
 function fail(what: string, logs: readonly unknown[]): never {
   console.error(`Build failed: ${what}`);
@@ -59,3 +59,12 @@ await Bun.write(
 const size = (n: number) => `${(n / 1024).toFixed(1)} KB`;
 for (const o of [...pages.outputs, ...fn.outputs]) console.log(`${o.path.replace(/\\/g, "/").split(".vercel/output/")[1]}  ${size(o.size)}`);
 console.log(`\nBuilt ${OUT}`);
+
+// Street Patrol photos (CausalFace subset) are published only if installed locally with
+// `bun run faces`; they are git-ignored, so a Vercel build from the repo has none by default.
+const { readdir, cp } = await import("node:fs/promises");
+const faces = await readdir("data/faces").catch(() => [] as string[]);
+if (faces.some((f) => f.endsWith(".jpg"))) {
+  await cp("data/faces", `${OUT}/static/faces`, { recursive: true, filter: (src) => !src.endsWith("manifest.json") });
+  console.log(`Copied ${faces.filter((f) => f.endsWith(".jpg")).length} face photos`);
+} else console.log("No face photos installed: Street Patrol photo mode will be unavailable on this build.");

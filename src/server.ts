@@ -4,6 +4,7 @@
 import dispatchPage from "../web/dispatch/index.html";
 import highwayPage from "../web/highway/index.html";
 import homePage from "../web/home/index.html";
+import patrolPage from "../web/patrol/index.html";
 import sortingPage from "../web/sorting/index.html";
 import towerPage from "../web/tower/index.html";
 import { handleProxy } from "./proxy";
@@ -17,6 +18,12 @@ const server = Bun.serve({
     "/dispatch": dispatchPage,
     "/sorting": sortingPage,
     "/highway": highwayPage,
+    "/patrol": patrolPage,
+    "/faces/:file": (req) => {
+      // Only plain file names: no paths out of data/faces.
+      const file = Bun.file(`data/faces/${req.params.file.replace(/[^\w.-]/g, "")}`);
+      return file.size ? new Response(file) : new Response("Photos not installed: run `bun run faces`", { status: 404 });
+    },
     "/api/openrouter": {
       POST: (req) =>
         handleProxy(req, {

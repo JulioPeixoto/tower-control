@@ -19,6 +19,8 @@ export interface DecisionRequest<C = unknown> {
   id: string;
   state: string;
   questions: Questions;
+  /** Image paths (e.g. "/faces/x.jpg") shown to vision models. Jev and the bots never see them. */
+  images?: string[];
   /** Structured data for rule-based bots. Never shown to a model. */
   context?: C;
 }

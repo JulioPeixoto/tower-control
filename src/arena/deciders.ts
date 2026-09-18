@@ -1,4 +1,5 @@
 // Who answers the typed questions: Jev (native), an LLM (JSON schema), or a game's bot.
+import { loadImage } from "../images";
 import { MODELS } from "../models";
 import { openrouter } from "../openrouter";
 import { acquire } from "../ratelimit";
@@ -122,11 +123,16 @@ function llmDecider(id: string, label: string, model: string, reasoningEffort = 
       await acquire(model);
       const t0 = performance.now();
       const prompt = [req.state, "", "QUESTIONS (answer every one)", ...Object.entries(req.questions).map(([k, q]) => describeQuestion(k, q))].join("\n");
+      // Vision models get the request's images alongside the text.
+      const images = req.images?.length ? await Promise.all(req.images.map(loadImage)) : [];
+      const userContent = images.length
+        ? [{ type: "text", text: prompt }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))]
+        : prompt;
       const res = await openrouter<ChatResponse>("/v1/chat/completions", {
         model,
         messages: [
           { role: "system", content: SYSTEM },
-          { role: "user", content: prompt },
+          { role: "user", content: userContent },
         ],
         response_format: { type: "json_schema", json_schema: { name: "decisions", strict: true, schema: schemaFor(req.questions) } },
         reasoning: { effort: reasoningEffort },
