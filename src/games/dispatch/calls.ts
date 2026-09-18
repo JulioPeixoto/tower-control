@@ -48,13 +48,13 @@ const TEMPLATES: Template[] = [
   T("real", "medical", 1, true, "My daughter fell off the climbing frame at {park} and her arm is bent the wrong way."),
   T("real", "medical", 1, true, "I'm pregnant and my water just broke, the contractions are really close together. {addr}."),
   T("real", "medical", 1, true, "My friend took something at the party and now he's throwing up and doesn't know where he is. {addr}."),
-  T("real", "medical", 0, true, "My grandmother slipped in the bathroom, she's okay and talking but she can't get up by herself. {addr}."),
+  T("real", "medical", 0, true, "My grandmother slipped in the bathroom and hurt her hip. She's talking and breathing fine but it hurts too much to stand. {addr}."),
   T("real", "police", 2, true, "Someone just broke into my house, I'm hiding in the bathroom, I can hear him downstairs. {addr}."),
   T("real", "police", 2, true, "There's a man with a knife shouting at people outside {place}!"),
   T("real", "police", 2, true, "My ex is banging on my door and says he'll hurt me if I don't open it. {addr}. Please."),
   T("real", "police", 1, true, "Two guys are fighting in front of the bar on {street}, one of them has a bottle."),
   T("real", "police", 1, true, "I just saw someone smash a car window on {street} and grab a bag, he ran toward the river."),
-  T("real", "police", 0, true, "There's a car blocking the fire lane at {addr} for two hours now, the driver is nowhere to be found."),
+  T("real", "police", 0, true, "Someone is spray-painting the walls of the school on {street} right now, there are three of them and they're kicking the door."),
 
   // Real and serious, but the caller sounds calm. Keyword matching misses these.
   T("calm", "fire", 2, true, "Hi, sorry to bother you. There's a bit of smoke coming under my door and the handle is hot. I'm on the fourth floor at {addr}."),
@@ -72,6 +72,9 @@ const TEMPLATES: Template[] = [
   T("info", "medical", 0, false, "I cut my finger while cooking, it bled a little but it stopped. Should I put a bandage on it?"),
   T("info", "fire", 0, false, "The fire alarm in my building went off because I burned toast. It's fine now, I just wanted you to know."),
   T("info", "police", 0, false, "I'm dying to know if the parade on {street} is still happening tomorrow."),
+  // Found by the first benchmark pass: every model declined this, matching the question's own
+  // "non-emergency report" criterion, so it belongs here rather than with the real calls.
+  T("info", "police", 0, false, "There's a car blocking the fire lane at {addr} for two hours now, the driver is nowhere to be found."),
   T("info", "fire", 0, false, "Is it allowed to have a barbecue in {park} this weekend?"),
 
   // Pranks: loud, full of emergency words, nothing real.
