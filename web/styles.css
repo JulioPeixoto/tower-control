@@ -20,7 +20,9 @@
   --holder-bot: #6a7479;
 
   --font-ui: "B612", system-ui, sans-serif;
-  --font-data: "B612 Mono", ui-monospace, monospace;
+  /* B612 Mono pads "." and ":" to a full cell ("0. 40 s"), so HTML numbers use B612 with
+     tabular digits. The mono stays on the radar data blocks, which have no punctuation. */
+  --font-data: "B612", system-ui, sans-serif;
 }
 
 *,
@@ -33,6 +35,7 @@ html {
   background: var(--console);
   color: var(--label);
   font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -309,10 +312,12 @@ input[type="number"] {
   padding: 10px;
 }
 
+/* Keep the whole match on one screen, so it can be recorded. */
 .radar {
   display: block;
-  width: 100%;
+  width: min(100%, max(320px, calc(100vh - 420px)));
   aspect-ratio: 1;
+  margin: 0 auto;
 }
 
 .board {

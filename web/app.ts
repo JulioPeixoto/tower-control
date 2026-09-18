@@ -195,6 +195,11 @@ const seconds = (ms: number | null) => (ms === null ? "–" : `${(ms / 1000).toF
 const dollars = (usd: number) => (usd === 0 ? "$0" : usd < 0.1 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(3)}`);
 
 function onFrame(frame: Frame): void {
+  if (frame.matchId <= ignoreUpTo) return;
+  if (frame.matchId !== matchId) {
+    clearPanels();
+    matchId = frame.matchId;
+  }
   currentMode = frame.config.mode;
   if (!running && !frame.done) setRunning(true);
   clockEl.textContent = fmtClock(frame.t);
@@ -256,7 +261,7 @@ function renderRadio(panel: Panel, radio: RadioLine[]): void {
         const who = document.createElement("b");
         who.textContent = l.to ? `${l.from} → ${l.to} ` : `${l.from} `;
         body.append(who, l.text);
-        if (l.latencyMs !== undefined && l.kind === "atc") {
+        if (l.latencyMs && l.kind === "atc") {
           const lag = document.createElement("em");
           lag.textContent = ` +${(l.latencyMs / 1000).toFixed(1)} s`;
           body.append(lag);

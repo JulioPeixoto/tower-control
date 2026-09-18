@@ -223,28 +223,34 @@ export function drawRadar(ctx: CanvasRenderingContext2D, lane: LaneFrame, o: Dra
     if (a.phase === "approach" || a.phase === "final" || a.emergency) ctx.fillRect(ax - s, ay - s, s * 2, s * 2);
     else ctx.strokeRect(ax - s, ay - s, s * 2, s * 2);
 
-    const lx = ax + px(12);
+    const trend = a.tgtAlt < a.alt - 60 ? "↓" : a.tgtAlt > a.alt + 60 ? "↑" : " ";
+    const altBlock = trend === " " ? fl(a.alt) : `${fl(a.alt)}${trend}${fl(a.tgtAlt)}`;
+    const line2 = `${altBlock} ${Math.round(a.spd / 10)}`;
+    const tag = tagFor(a);
+    const bold = `700 ${px(11)}px "B612 Mono", monospace`;
+    const regular = `${px(10.5)}px "B612 Mono", monospace`;
+    ctx.font = regular;
+    const blockWidth = Math.max(ctx.measureText(line2).width, tag ? ctx.measureText(tag.text).width : 0, a.id.length * px(7));
+
+    // Data block sits up-right of the symbol, or up-left near the scope's right edge.
+    const flip = ax + px(12) + blockWidth > size - px(4);
+    const lx = flip ? ax - px(12) - blockWidth : ax + px(12);
     const ly = ay - px(12);
     ctx.globalAlpha = 0.6;
     ctx.beginPath();
-    ctx.moveTo(ax + s, ay - s);
-    ctx.lineTo(lx - px(2), ly + px(2));
+    ctx.moveTo(flip ? ax - s : ax + s, ay - s);
+    ctx.lineTo(flip ? lx + blockWidth + px(2) : lx - px(2), ly + px(2));
     ctx.stroke();
     ctx.globalAlpha = 1;
 
     const lh = px(12);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
-    ctx.font = `700 ${px(11)}px "B612 Mono", monospace`;
+    ctx.font = bold;
     ctx.fillStyle = color;
     ctx.fillText(a.id, lx, ly - lh);
-
-    const trend = a.tgtAlt < a.alt - 60 ? "↓" : a.tgtAlt > a.alt + 60 ? "↑" : " ";
-    const altBlock = trend === " " ? fl(a.alt) : `${fl(a.alt)}${trend}${fl(a.tgtAlt)}`;
-    ctx.font = `${px(10.5)}px "B612 Mono", monospace`;
-    ctx.fillText(`${altBlock} ${Math.round(a.spd / 10)}`, lx, ly);
-
-    const tag = tagFor(a);
+    ctx.font = regular;
+    ctx.fillText(line2, lx, ly);
     if (tag) {
       ctx.fillStyle = tag.tone === "red" ? p.red : tag.tone === "amber" ? p.amber : color;
       ctx.fillText(tag.text, lx, ly + lh);

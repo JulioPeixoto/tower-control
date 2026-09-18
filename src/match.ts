@@ -243,7 +243,7 @@ export class Match {
   /** Writes the full run (config, metrics and every decision) to runs/. Returns the path. */
   async save(stopped: boolean, dir = "runs"): Promise<string> {
     await mkdir(dir, { recursive: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 23);
     const { level, seed, mode } = this.config;
     const file = `${dir}/${stamp}-L${level}-s${seed}-${mode}.json`;
     await Bun.write(
