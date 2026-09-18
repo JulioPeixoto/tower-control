@@ -27,5 +27,4 @@ desktop.ini
 .vercel/
 
 # --- Data: only the Street Patrol faces are versioned (synthetic, CausalFace) ---
-data/*
-!data/faces/
+
