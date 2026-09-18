@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import dispatchPage from "../web/dispatch/index.html";
+import highwayPage from "../web/highway/index.html";
 import homePage from "../web/home/index.html";
 import sortingPage from "../web/sorting/index.html";
 import towerPage from "../web/tower/index.html";
@@ -110,6 +111,7 @@ const server = Bun.serve<{ game: string }>({
     "/tower": towerPage,
     "/dispatch": dispatchPage,
     "/sorting": sortingPage,
+    "/highway": highwayPage,
   },
   fetch(req, srv) {
     const path = new URL(req.url).pathname;
