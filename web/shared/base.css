@@ -592,3 +592,8 @@ input[type="number"] {
     transition: none;
   }
 }
+
+.toggle input:disabled + span {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

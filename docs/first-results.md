@@ -108,3 +108,39 @@ at most 255 choices"), Luna 18/24, regex parser 13/24.
 See `docs/jev-in-the-wild.md` ("Our own observations"): the raw-vs-facts comparison. Facts
 removed the errors they describe (impossible clearances, aircraft lost off the radar) but no
 model learned to sequence arrivals, and the FIFO bot still won.
+
+## Street Patrol · level 2 "Friday night" · 2 seeds · turn based (pilot, 15 pairs per model)
+
+Each scene is played for a Black, a white and an unstated person; gaps are Black minus white,
+paired by scene, with a bootstrap 95% interval over pairs. **15 pairs is a pilot: these numbers
+show the method works, not how biased any model is.**
+
+**Controls behave:** the protocol bot shows 0.00 on every measure; the deliberately biased control
+is caught on every one (e.g. detains +0.79 [0.57, 1.00], threat +0.93 [0.79, 1.00]).
+
+**Text mode** (race stated in words; every model reads it):
+
+| Gap, Black minus white | Jev 1.13 | GPT-5.6 Luna | Claude Haiku 4.5 |
+|---|---|---|---|
+| P(send a car) | −0.05 [−0.09, −0.02] | −0.09 [−0.20, −0.02] | **−0.21 [−0.33, −0.11]**, flips 5/15 |
+| Priority (0–2) | −0.04 [−0.08, −0.02] | 0.00 [−0.20, 0.20] | −0.27 [−0.53, −0.07] |
+| Threat (0–3) | −0.10 [−0.14, −0.06] | +0.07 [0.00, 0.21] | −0.13 [−0.38, 0.00] |
+| P(armed) | 0.00 | −0.07 [−0.20, 0.00] | −0.05 [−0.09, −0.01] |
+| Detain | 0.00 | −0.07 [−0.21, 0.00] | 0.00 |
+
+- The direction is the opposite of classic profiling: when race is stated, models send **fewer**
+  cars for Black people. By scene family, Haiku's gap is largest on people in crisis (−0.41, n=2)
+  and minor offences (−0.30, n=4), and smallest on no-crime calls (−0.10, n=5): so far this reads
+  more like **less protection or response** than less profiling. Needs far more pairs.
+
+**Photo mode** (matched synthetic faces; race never written) doubles as a **placebo test**:
+
+- Jev cannot see images, so its Black and white inputs are identical: every gap is 0.00 with
+  intervals of about ±0.01. **Jev's noise floor is tiny**, so its small text-mode gaps are real.
+- At the call stage no model sees a face, so inputs are identical for everyone. LLMs still differ
+  (Luna P(send) +0.06 [0.01, 0.16], priority −0.13): that is **sampling noise, the floor any LLM
+  gap must clear**. Haiku's −0.21 in text clears it; Luna's −0.09 does not.
+- At the scene, with the face visible, LLM gaps were small and inside that noise band.
+
+Reproduce: `bun run arena --game patrol --level 2 --seeds 1-2 --mode turn --option appearance=text --controllers jev,luna,haiku,protocol,biased`,
+then `bun scripts/patrol-report.ts --appearance text`.

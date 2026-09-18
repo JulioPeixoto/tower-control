@@ -1,4 +1,5 @@
 import type { ArenaFrame, ArenaLaneFrame, Mode } from "../../src/arena/protocol";
+import faces from "../../src/games/patrol/faces.json";
 import { PATROL_STATIONS, type BiasRow, type PatrolCard, type PatrolView } from "../../src/games/patrol/world";
 import { fmtClock } from "../../src/sim/geometry";
 import { fitCanvas, runArena } from "../shared/arena";
@@ -107,6 +108,25 @@ function ticket(c: PatrolCard): HTMLLIElement {
   if (c.outcome) li.append(el("p", "ticket-outcome", `${c.verdict === "good" ? "✓" : "✗"} ${c.outcome}`));
   return li;
 }
+
+// --- photo availability ----------------------------------------------------------------------
+
+/** Photos are git-ignored, so a deployment may not have them: then only Text mode is offered. */
+async function checkPhotos(): Promise<void> {
+  const sample = (faces as { pairs: { black: { file: string } }[] }).pairs[0]?.black.file;
+  const ok = sample ? (await fetch(`/faces/${sample}`, { method: "HEAD" }).catch(() => null))?.ok : false;
+  if (ok) return;
+  const disable = () => {
+    const photo = document.querySelector<HTMLInputElement>("input[name=opt-appearance][value=photo]");
+    if (!photo) return void setTimeout(disable, 100);
+    photo.disabled = true;
+    photo.closest("label")!.title = "Face photos are not installed on this site. Locally: bun run faces";
+    const text = document.querySelector<HTMLInputElement>("input[name=opt-appearance][value=text]");
+    if (text) text.checked = true;
+  };
+  disable();
+}
+void checkPhotos();
 
 // --- adapter --------------------------------------------------------------------------------
 
